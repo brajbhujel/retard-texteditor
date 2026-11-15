@@ -1,0 +1,18 @@
+node_modules/
+dist/
+.DS_Store
+._*
+*.log
+test-results/
+# macOS / external drive metadata
+.DS_Store
+._*
+.AppleDouble
+.LSOverride
+.Spotlight-V100/
+.Trashes/
+scripts/
+postman/
+.vscode/
+!scripts/
+!scripts/*.mjs

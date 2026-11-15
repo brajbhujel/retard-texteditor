@@ -1,0 +1,51 @@
+import { escapeHTML as e, safeURL, embedURL, flattenList } from '../core/model.js';
+import { sanitizeHTML as s } from '../core/sanitize.js';
+import { icon } from '../ui/icons.js';
+const editable = (tag, field, value, placeholder, extra = '', readOnly = false) => `<${tag} data-field="${field}" contenteditable="${!readOnly}" role="textbox" aria-label="${placeholder}" data-placeholder="${placeholder}" ${extra}>${s(value)}</${tag}>`;
+const empty = (type, label, description, glyph) => `<button class="media-placeholder" data-block-action="configure" data-kind="${type}"><span class="media-placeholder-icon">${icon(glyph, 24)}</span><span><strong>${label}</strong><small>${description}</small></span>${icon('plus')}</button>`;
+export class ToolRegistry {
+  constructor(tools = {}) { this.tools = new Map(Object.entries({ ...builtins, ...tools })); }
+  register(name, tool) { if (typeof tool.render !== 'function') throw new Error('A tool needs a render function.'); this.tools.set(name, tool); return this; }
+  get(name) { return this.tools.get(name); }
+  names() { return [...this.tools.keys()]; }
+  entries() { return [...this.tools.entries()]; }
+}
+export const builtins = {
+  paragraph: { title: 'Text', icon: 'text', description: 'Just start writing', group: 'Basic', render: (d, ro) => editable('div', 'text', d.text, "Type '/' for blocks", 'class="paragraph"', ro) },
+  header: { title: 'Heading', icon: 'heading', description: 'Give your ideas a little structure', group: 'Basic', render: (d, ro) => editable(`h${d.level}`, 'text', d.text, `Heading ${d.level}`, '', ro) },
+  list: { title: 'Bulleted list', icon: 'list', description: 'Keep things organised', group: 'Basic', render: (d, ro) => `<div class="list-block ${d.style}">${flattenList(d.items).map((item, index, items) => {
+    let number = 1; for (let i = index - 1; i >= 0 && items[i].depth >= item.depth; i--) if (items[i].depth === item.depth) number++;
+    return `<div class="list-row" data-depth="${item.depth}" style="--depth:${item.depth}">${d.style === 'checklist' ? `<input type="checkbox" aria-label="Check item ${index + 1}" ${item.checked ? 'checked' : ''} ${ro ? 'disabled' : ''}>` : `<span class="list-bullet">${d.style === 'ordered' ? `${number}.` : '•'}</span>`}${editable('div', `item:${index}`, item.content, 'List item', '', ro)}</div>`;
+  }).join('')}</div>` },
+  checklist: { title: 'Checklist', icon: 'checklist', description: 'Turn your ideas into action', group: 'Basic', render: (d, ro) => `<div class="list-block checklist">${d.items.map((item, i) => `<div class="list-row" data-depth="0"><input type="checkbox" aria-label="Check item ${i + 1}" ${item.checked ? 'checked' : ''} ${ro ? 'disabled' : ''}>${editable('div', `item:${i}`, item.text, 'To-do', '', ro)}</div>`).join('')}</div>` },
+  quote: { title: 'Quote', icon: 'quote', description: 'Make a thought stand out', group: 'Basic', render: (d, ro) => `<blockquote>${editable('div', 'text', d.text, 'A thought worth sharing…', '', ro)}${editable('div', 'caption', d.caption, 'Attribution', 'class="quote-caption"', ro)}</blockquote>` },
+  warning: { title: 'Callout', icon: 'alert', description: 'Highlight something important', group: 'Basic', render: (d, ro) => `<div class="callout">${icon('sparkle', 21)}<div>${editable('div', 'title', d.title, 'Worth a note', 'class="callout-title"', ro)}${editable('div', 'message', d.message, 'Add a little context…', '', ro)}</div></div>` },
+  delimiter: { title: 'Divider', icon: 'minus', description: 'A pause between ideas', group: 'Basic', render: () => '<div class="delimiter" role="separator"><span></span><i></i><i></i><i></i><span></span></div>' },
+  image: { title: 'Image', icon: 'image', description: 'Upload or paste an image URL', group: 'Media', render: (d, ro) => {
+    const url = safeURL(d.file.url, 'image');
+    return url ? `<figure class="image-block ${d.withBorder ? 'with-border' : ''} ${d.withBackground ? 'with-background' : ''} ${d.stretched ? 'stretched' : ''}"><img src="${e(url)}" alt="${e(d.alt || '')}" loading="lazy">${editable('figcaption', 'caption', d.caption, 'Add a caption…', '', ro)}${ro ? '' : '<button class="media-edit" data-block-action="configure">Replace image</button>'}</figure>` : ro ? '' : empty('image', 'Add an image', 'Choose a file or paste a link', 'image');
+  } },
+  table: { title: 'Table', icon: 'table', description: 'Bring your data together', group: 'Advanced', render: (d, ro) => `<div class="table-scroll"><table class="data-table">${d.content.map((row, r) => `<tr>${row.map((cell, c) => `<${r === 0 && d.withHeadings ? 'th' : 'td'}>${editable('div', `cell:${r}:${c}`, cell, `Row ${r + 1}, column ${c + 1}`, '', ro)}</${r === 0 && d.withHeadings ? 'th' : 'td'}>`).join('')}</tr>`).join('')}</table></div>${ro ? '' : '<div class="table-actions"><button data-block-action="table-row">+ Row</button><button data-block-action="table-column">+ Column</button><button data-block-action="table-heading">Toggle header</button><button data-block-action="table-delete-row">− Last row</button><button data-block-action="table-delete-column">− Last column</button></div>'}` },
+  code: { title: 'Code', icon: 'code', description: 'A home for your snippets', group: 'Advanced', render: (d, ro) => `<div class="code-block"><div class="code-header"><select aria-label="Code language" data-block-action="language" ${ro ? 'disabled' : ''}>${['javascript', 'typescript', 'python', 'html', 'css', 'json', 'sql', 'bash', 'text'].map(lang => `<option ${d.language === lang ? 'selected' : ''}>${lang}</option>`).join('')}</select><button data-block-action="copy-code">${icon('copy', 14)} Copy</button></div><pre><code contenteditable="${!ro}" role="textbox" aria-label="Code" spellcheck="false" data-field="code" data-placeholder="Write your code here…">${e(d.code)}</code></pre></div>` },
+  raw: { title: 'Raw HTML', icon: 'code', description: 'Store HTML source safely', group: 'Advanced', render: (d, ro) => `<div class="code-block"><div class="code-header"><span>HTML source</span><small>Source only · never executed</small></div><pre><code contenteditable="${!ro}" role="textbox" aria-label="HTML source" spellcheck="false" data-field="html" data-placeholder="<section>…</section>">${e(d.html)}</code></pre></div>` },
+  embed: { title: 'Embed', icon: 'video', description: 'YouTube or Vimeo video', group: 'Media', render: (d, ro) => {
+    const url = embedURL(d.source || d.embed);
+    return url ? `<figure class="embed-block"><iframe src="${e(url)}" title="Embedded video" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="fullscreen; picture-in-picture" sandbox="allow-scripts allow-same-origin allow-presentation" allowfullscreen></iframe>${editable('figcaption', 'caption', d.caption, 'Add a caption…', '', ro)}</figure>` : ro ? '' : empty('embed', 'Embed a video', 'Paste a YouTube or Vimeo link', 'video');
+  } },
+  linkTool: { title: 'Bookmark', icon: 'link', description: 'Save a link with a description', group: 'Media', render: (d, ro) => {
+    const url = safeURL(d.link);
+    return url ? `<div class="bookmark">${icon('globe', 28)}<div>${editable('div', 'meta.title', d.meta.title || url, 'Bookmark title', 'class="bookmark-title"', ro)}${editable('div', 'meta.description', d.meta.description, 'Add a description…', 'class="bookmark-description"', ro)}<a href="${e(url)}" target="_blank" rel="noopener noreferrer">${e(url)}</a></div>${ro ? '' : '<button data-block-action="configure" class="icon-button" aria-label="Edit link">✎</button>'}</div>` : ro ? '' : empty('linkTool', 'Add a bookmark', 'Keep a useful link close by', 'link');
+  } },
+  attaches: { title: 'Attachment', icon: 'attach', description: 'Attach a file to your document', group: 'Media', render: (d, ro) => {
+    const url = safeURL(d.file.url, 'file');
+    return url ? `<div class="attachment">${icon('file', 26)}<div>${editable('div', 'title', d.title || d.file.name, 'File title', '', ro)}<small>${e(d.file.name)} · ${((d.file.size || 0) / 1024).toFixed(1)} KB</small></div><a class="icon-button" href="${e(url)}" download="${e(d.file.name || 'download')}" aria-label="Download attachment">${icon('download')}</a></div>` : ro ? '' : empty('attaches', 'Attach a file', 'Documents, PDFs, and more', 'attach');
+  } },
+  toggle: { title: 'Toggle', icon: 'right', description: 'Keep the details tucked away', group: 'Advanced', render: (d, ro) => `<details class="toggle-block" ${d.open ? 'open' : ''}><summary>${editable('span', 'title', d.title, 'Toggle heading', '', ro)}</summary>${editable('div', 'text', d.text, 'Write the details…', '', ro)}</details>` },
+  audio: { title: 'Audio', icon: 'audio', description: 'Upload or link an audio file', group: 'Media', render: (d, ro) => safeURL(d.url, 'file') ? `<figure class="audio-block"><audio controls src="${e(safeURL(d.url, 'file'))}"></audio>${editable('figcaption', 'caption', d.caption, 'Audio caption', '', ro)}</figure>` : ro ? '' : empty('audio', 'Add audio', 'Upload a recording or paste a link', 'audio') },
+  video: { title: 'Video file', icon: 'video', description: 'Upload or link a video', group: 'Media', render: (d, ro) => safeURL(d.url, 'file') ? `<figure class="video-block"><video controls src="${e(safeURL(d.url, 'file'))}"></video>${editable('figcaption', 'caption', d.caption, 'Video caption', '', ro)}</figure>` : ro ? '' : empty('video', 'Add a video', 'Upload a video or paste a link', 'video') },
+};
+export const toolChoices = registry => registry.entries().flatMap(([type, tool]) => {
+  if (type === 'header') return [1, 2, 3, 4, 5, 6].map(level => ({ type, title: `Heading ${level}`, icon: 'heading', description: ['','The biggest ideas','A new section','A smaller section','More detail','A subheading','The fine details'][level], group: 'Basic', data: { level }, shortcut: '#'.repeat(level) }));
+  if (type === 'list') return [{ type, ...tool, title: 'Bulleted list', data: { style: 'unordered' }, shortcut: '-' }, { type, ...tool, title: 'Numbered list', icon: 'ordered', data: { style: 'ordered' }, shortcut: '1.' }];
+  return [{ type, ...tool, data: {}, shortcut: { paragraph: '', checklist: '[]', quote: '>', delimiter: '---', code: '```' }[type] || '' }];
+});
