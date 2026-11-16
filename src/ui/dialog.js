@@ -1,4 +1,13 @@
 import { icon } from './icons.js';
+import { restoreRange } from '../core/selection.js';
+export function formatOnClose(modal, editor, action, value, label) {
+  const range = editor.savedRange?.cloneRange();
+  modal.addEventListener('close', () => {
+    if (editor.abort.signal.aborted) return;
+    restoreRange(range);
+    editor.format(action, value, label);
+  }, { once: true });
+}
 export function dialog({ title, description = '', body, submit = 'Save', wide = false, onSubmit }) {
   const previous = document.activeElement;
   const element = document.createElement('dialog');

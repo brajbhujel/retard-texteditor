@@ -29,7 +29,14 @@ export class RetardEditor extends EventTarget {
     this.inline.setAttribute('role', 'toolbar');
     this.inline.setAttribute('aria-label', 'Text formatting');
     this.inline.hidden = true;
-    this.inline.innerHTML = [['bold', 'Bold', 'bold'], ['italic', 'Italic', 'italic'], ['underline', 'Underline', 'underline'], ['strike', 'Strikethrough', 'strikeThrough'], ['marker', 'Highlight', 'mark'], ['code', 'Inline code', 'code'], ['link', 'Add link', 'link'], ['book', 'Footnote', 'footnote']].map(([glyph, label, action]) => `<button type="button" data-format="${action}" aria-label="${label}" title="${label}">${icon(glyph, 17)}</button>`).join('') + '<span class="toolbar-divider"></span><button data-format="sub" title="Subscript" aria-label="Subscript">x₂</button><button data-format="sup" title="Superscript" aria-label="Superscript">x²</button><button data-format="color" title="Text colour" aria-label="Text colour"><span class="text-color-icon">A</span></button><button data-format="removeFormat" title="Clear formatting" aria-label="Clear formatting">Tx</button>';
+    this.inline.innerHTML = this.toolbarMarkup(true);
+    this.formatbar = document.createElement('div');
+    this.formatbar.className = 'document-formatbar';
+    this.formatbar.setAttribute('role', 'toolbar');
+    this.formatbar.setAttribute('aria-label', 'Document formatting');
+    this.formatbar.dataset.preserveSelection = 'true';
+    this.formatbar.innerHTML = this.toolbarMarkup(false);
+    this.holder.before(this.formatbar);
     document.body.append(this.inline);
     this.render();
     this.bind();
@@ -43,25 +50,99 @@ export class RetardEditor extends EventTarget {
   getBlock(id = this.activeId) { return this.blocks.find(block => block.id === id); }
   index(id = this.activeId) { return this.blocks.findIndex(block => block.id === id); }
   row(id) { return this.holder.querySelector(`[data-block-id="${CSS.escape(id)}"]`); }
+  toolbarMarkup(compact) {
+    const actions = [['bold', 'Bold', 'bold'], ['italic', 'Italic', 'italic'], ['underline', 'Underline', 'underline'], ['strike', 'Strikethrough', 'strikeThrough'], ['code', 'Inline code', 'code']];
+    const controls = actions.map(([glyph, label, action]) => `<button type="button" data-format="${action}" aria-label="${label}" title="${label}" aria-pressed="false">${icon(glyph, 17)}</button>`).join('');
+    return `<button type="button" data-type-menu class="type-switch" aria-label="Text style" title="Change text style"><span data-type-label>Text</span>${icon('chevron', 12)}</button><span class="toolbar-divider"></span>${controls}<span class="toolbar-divider"></span><button type="button" data-format="link" class="labelled-tool" aria-label="Add or edit link" title="Add or edit link (⌘/Ctrl K)">${icon('link', 17)}<span>Link</span></button><button type="button" data-format="color" aria-label="Text colour" title="Text colour"><span class="text-color-icon">A</span></button><button type="button" data-format="background" aria-label="Text background colour" title="Text background colour">${icon('paint', 18)}</button>${compact ? '' : `<span class="toolbar-divider"></span><button type="button" data-format="footnote" aria-label="Footnote" title="Add a footnote">${icon('book', 16)}</button><button type="button" data-format="sub" aria-label="Subscript" title="Subscript">x₂</button><button type="button" data-format="sup" aria-label="Superscript" title="Superscript">x²</button>`}<button type="button" data-format="removeFormat" aria-label="Clear formatting" title="Clear formatting">${icon('eraser', 17)}</button>`;
+  }
+  updateFormatbar() {
+    const block = this.getBlock();
+    const label = block?.type === 'header' ? `Heading ${block.data.level}` : this.registry.get(block?.type)?.title || 'Text';
+    for (const toolbar of [this.inline, this.formatbar]) {
+      if (!toolbar) continue;
+      const type = toolbar.querySelector('[data-type-label]');
+      if (type && type.textContent !== label) type.textContent = label;
+      for (const button of toolbar.querySelectorAll('[data-format]')) {
+        const action = button.dataset.format;
+        if (!['bold', 'italic', 'underline', 'strikeThrough', 'code', 'sub', 'sup'].includes(action)) { button.removeAttribute('aria-pressed'); continue; }
+        let active = false;
+        if (['code', 'sub', 'sup'].includes(action)) {
+          const range = selectionRange(this.holder);
+          const start = range?.startContainer;
+          const mark = (start?.nodeType === Node.ELEMENT_NODE ? start : start?.parentElement)?.closest(action);
+          active = !!mark?.contains(range?.endContainer);
+        } else try { active = document.queryCommandState(action); } catch {}
+        button.classList.toggle('active', active); button.setAttribute('aria-pressed', String(active));
+      }
+    }
+  }
+  openTypeMenu(anchor, id = this.activeId || this.blocks[0]?.id) {
+    if (this.readOnly || !id) return;
+    const range = selectionRange(this.holder);
+    if (range) this.savedRange = range;
+    this.closeMenu(); this.inline.hidden = true;
+    const block = this.getBlock(id);
+    this.menu = document.createElement('div'); this.menu.className = 'editor-popover type-menu';
+    this.menu.setAttribute('role', 'dialog'); this.menu.setAttribute('aria-label', 'Text style');
+    this.menu.innerHTML = `<div class="menu-label">TEXT STYLE</div><button type="button" data-style="paragraph" class="type-text ${block.type === 'paragraph' ? 'selected' : ''}">${icon('text', 18)}<span>Text</span>${block.type === 'paragraph' ? icon('check', 15) : ''}</button><div class="menu-label">HEADING LEVEL</div><div class="heading-level-grid">${[1, 2, 3, 4, 5, 6].map(level => `<button type="button" data-level="${level}" aria-label="Heading ${level}" aria-pressed="${block.type === 'header' && block.data.level === level}" class="${block.type === 'header' && block.data.level === level ? 'selected' : ''}">H<span>${level}</span></button>`).join('')}</div><p class="type-menu-hint">Change the style. Keep your words.</p>`;
+    document.body.append(this.menu); this.placeMenu(this.menu, anchor);
+    this.menu.addEventListener('pointerdown', event => { if (event.target.closest('button')) event.preventDefault(); });
+    this.menu.addEventListener('click', event => {
+      const level = event.target.closest('[data-level]')?.dataset.level;
+      if (level) this.convert(id, 'header', { level: Number(level) });
+      else if (event.target.closest('[data-style]')) this.convert(id, 'paragraph');
+      this.updateFormatbar();
+    });
+    this.menu.addEventListener('keydown', event => { if (event.key === 'Escape') { this.closeMenu(); this.focus(id); } });
+  }
+  blockMarkup(block) {
+    const alignment = ['left', 'center', 'right', 'justify'].includes(block.tunes.alignment) ? block.tunes.alignment : 'left';
+    const tool = this.registry.get(block.type);
+    return `<div class="editor-block" data-block-id="${block.id}" data-type="${block.type}" style="text-align:${alignment}" role="group" aria-label="${escapeHTML(tool.title || block.type)} block">${this.readOnly ? '' : `<div class="block-controls"><button type="button" class="block-add" data-block-action="add" aria-label="Insert block" title="Insert block">${icon('plus', 18)}</button><button type="button" class="block-grip" draggable="true" data-block-action="menu" aria-label="Block settings" title="Drag to move · click for settings">${icon('grip', 18)}</button></div>`}<div class="block-content">${tool.render(block.data, this.readOnly, block)}${Array.isArray(block.tunes.footnotes) && block.tunes.footnotes.length ? `<ol class="block-footnotes">${block.tunes.footnotes.map(note => `<li>${sanitizeHTML(note)}</li>`).join('')}</ol>` : ''}</div></div>`;
+  }
   render() {
     this.holder.classList.toggle('is-readonly', this.readOnly);
-    this.holder.innerHTML = this.blocks.map(block => {
-      const alignment = ['left', 'center', 'right', 'justify'].includes(block.tunes.alignment) ? block.tunes.alignment : 'left';
-      const tool = this.registry.get(block.type);
-      return `<div class="editor-block ${this.selected.has(block.id) ? 'block-selected' : ''}" data-block-id="${block.id}" data-type="${block.type}" style="text-align:${alignment}" role="group" aria-label="${escapeHTML(tool.title || block.type)} block">${this.readOnly ? '' : `<div class="block-controls"><button class="block-add" data-block-action="add" aria-label="Insert block" title="Insert block">${icon('plus', 18)}</button><button class="block-grip" draggable="true" data-block-action="menu" aria-label="Block settings" title="Drag to move · click for settings">${icon('grip', 18)}</button></div>`}<div class="block-content">${tool.render(block.data, this.readOnly, block)}${Array.isArray(block.tunes.footnotes) && block.tunes.footnotes.length ? `<ol class="block-footnotes">${block.tunes.footnotes.map(note => `<li>${sanitizeHTML(note)}</li>`).join('')}</ol>` : ''}</div></div>`;
-    }).join('') + (this.readOnly ? '' : '<button class="end-block" data-end-block="true" aria-label="Add a paragraph">Click to keep writing, or press <kbd>/</kbd> for a block</button>');
+    const existing = new Map([...this.holder.querySelectorAll(':scope > [data-block-id]')].map(row => [row.dataset.blockId, row]));
+    const ids = new Set(this.blocks.map(block => block.id));
+    for (const [id, row] of existing) if (!ids.has(id)) { row.remove(); existing.delete(id); }
+    let cursor = this.holder.firstElementChild;
+    for (const block of this.blocks) {
+      const signature = JSON.stringify(block);
+      let row = existing.get(block.id);
+      existing.delete(block.id);
+      if (!row || row._editorSignature !== signature || row._editorReadOnly !== this.readOnly) {
+        const template = document.createElement('template');
+        template.innerHTML = this.blockMarkup(block);
+        const replacement = template.content.firstElementChild;
+        if (row) { if (cursor === row) cursor = replacement; row.replaceWith(replacement); }
+        row = replacement;
+        row._editorSignature = signature;
+        row._editorReadOnly = this.readOnly;
+      }
+      row.classList.toggle('block-selected', this.selected.has(block.id));
+      if (row !== cursor) this.holder.insertBefore(row, cursor);
+      cursor = row.nextElementSibling;
+    }
+    for (const row of existing.values()) row.remove();
+    let end = this.holder.querySelector('.end-block');
+    if (this.readOnly) end?.remove();
+    else if (!end) {
+      end = document.createElement('button'); end.type = 'button'; end.className = 'end-block'; end.dataset.endBlock = 'true';
+      end.setAttribute('aria-label', 'Add a paragraph'); end.innerHTML = 'Click to keep writing, or press <kbd>/</kbd> for a block'; this.holder.append(end);
+    }
     if (this.placeholder) this.holder.querySelector('.paragraph')?.setAttribute('data-placeholder', this.placeholder);
+    if (this.formatbar) { this.formatbar.hidden = this.readOnly; this.updateFormatbar(); }
   }
   syncRow(row) {
     if (!row) return;
     const block = this.getBlock(row.dataset.blockId);
     if (!block) return;
     const custom = this.registry.get(block.type);
-    if (custom.save) { block.data = custom.save(row.querySelector('.block-content'), block.data); return; }
+    if (custom.save) { block.data = custom.save(row.querySelector('.block-content'), block.data); row._editorSignature = JSON.stringify(block); return; }
     if (block.type === 'list' || block.type === 'checklist') {
       const items = [...row.querySelectorAll('.list-row')].map(el => ({ content: sanitizeHTML(el.querySelector('[data-field]').innerHTML), checked: !!el.querySelector('input')?.checked, depth: Number(el.dataset.depth) || 0 }));
       block.data.items = block.type === 'list' ? nestList(items) : items.map(item => ({ text: item.content, checked: item.checked }));
-      return;
+      row._editorSignature = JSON.stringify(block); return;
     }
     for (const field of row.querySelectorAll('[data-field]')) {
       const path = field.dataset.field.split(':');
@@ -71,6 +152,7 @@ export class RetardEditor extends EventTarget {
       else block.data[path[0]] = sanitizeHTML(field.innerHTML);
     }
     if (block.type === 'toggle') block.data.open = row.querySelector('details').open;
+    row._editorSignature = JSON.stringify(block);
   }
   syncAll() { this.holder.querySelectorAll('[data-block-id]').forEach(row => this.syncRow(row)); }
   changed(immediate = false) {
@@ -86,6 +168,7 @@ export class RetardEditor extends EventTarget {
   flush() { clearTimeout(this.historyTimer); this.syncAll(); this.history.push(this.snapshot()); }
   transaction(fn, focus) {
     if (this.readOnly) return;
+    const caret = bookmark(this.holder);
     this.flush();
     fn();
     if (!this.blocks.length) this.blocks.push(makeBlock());
@@ -93,6 +176,7 @@ export class RetardEditor extends EventTarget {
     this.inline.hidden = true;
     this.render();
     if (focus) this.focus(focus.id, focus.field, focus.side);
+    else restoreBookmark(this.holder, caret);
     this.changed(true);
   }
   focus(id, field, side = 'end') {
@@ -111,7 +195,7 @@ export class RetardEditor extends EventTarget {
     this.render(); this.history.reset(this.snapshot()); this.notify();
   }
   clear() { return this.load({ blocks: [] }); }
-  setReadOnly(value) { if (!this.readOnly) this.flush(); this.readOnly = !!value; this.closeMenu(); this.inline.hidden = true; this.selected.clear(); this.render(); }
+  setReadOnly(value) { if (this.readOnly === !!value) return; if (!this.readOnly) this.flush(); this.readOnly = !!value; this.closeMenu(); this.inline.hidden = true; this.selected.clear(); this.render(); }
   insert(type = 'paragraph', data = {}, index = this.blocks.length) {
     if (!this.registry.get(type)) throw new Error(`Unknown tool: ${type}`);
     const block = sanitizeBlocks(normalizeDocument({ blocks: [makeBlock(type, data)] }, this.registry.names()).blocks)[0];
@@ -145,9 +229,10 @@ export class RetardEditor extends EventTarget {
   }
   undo() {
     if (this.readOnly) return;
+    const caret = bookmark(this.holder);
     this.flush();
     const state = this.history.undo();
-    if (state) { this.blocks = state.blocks; this.closeMenu(); this.render(); restoreBookmark(this.holder, state.selection); this.notify(); }
+    if (state) { this.blocks = state.blocks; this.closeMenu(); this.render(); restoreBookmark(this.holder, state.selection || caret); this.notify(); }
   }
   redo() {
     if (this.readOnly) return;
@@ -156,7 +241,7 @@ export class RetardEditor extends EventTarget {
     if (state) { this.blocks = state.blocks; this.closeMenu(); this.render(); restoreBookmark(this.holder, state.selection); this.notify(); }
   }
   registerTool(name, tool) { this.registry.register(name, tool); return this; }
-  destroy() { clearTimeout(this.historyTimer); clearTimeout(this.selectionTimer); this.abort.abort(); this.closeMenu(); this.inline.remove(); this.holder.innerHTML = ''; }
+  destroy() { clearTimeout(this.historyTimer); clearTimeout(this.selectionTimer); this.abort.abort(); this.closeMenu(); this.inline.remove(); this.formatbar.remove(); this.holder.innerHTML = ''; }
   request(name, detail) { this.dispatchEvent(new CustomEvent(name, { detail })); }
   bind() {
     this.listen(this.holder, 'input', event => {
@@ -169,7 +254,12 @@ export class RetardEditor extends EventTarget {
     this.listen(this.holder, 'compositionend', event => { this.composing = false; this.syncRow(event.target.closest('[data-block-id]')); this.changed(); });
     this.listen(this.holder, 'focusin', event => {
       const row = event.target.closest('[data-block-id]');
-      if (row) this.activeId = row.dataset.blockId;
+      if (row) {
+        this.activeId = row.dataset.blockId;
+        const field = event.target.closest('[data-field]');
+        if (field?.dataset.field.startsWith('cell:')) this.activeCell = { id: this.activeId, field: field.dataset.field };
+        this.updateFormatbar();
+      }
       if (!event.target.closest('.block-controls')) this.clearSelection();
     });
     this.listen(this.holder, 'keydown', event => this.keydown(event));
@@ -223,10 +313,17 @@ export class RetardEditor extends EventTarget {
     });
     this.listen(this.holder, 'dragend', () => this.endDrag());
     this.listen(document, 'selectionchange', () => { clearTimeout(this.selectionTimer); this.selectionTimer = setTimeout(() => this.showInline(), 80); });
-    this.listen(this.inline, 'pointerdown', event => event.preventDefault());
-    this.listen(this.inline, 'click', event => { const action = event.target.closest('[data-format]')?.dataset.format; if (action) this.format(action); });
+    for (const toolbar of [this.inline, this.formatbar]) {
+      this.listen(toolbar, 'pointerdown', event => { if (event.target.closest('button')) event.preventDefault(); });
+      this.listen(toolbar, 'click', event => {
+        const typeButton = event.target.closest('[data-type-menu]');
+        if (typeButton) { this.openTypeMenu(typeButton); return; }
+        const action = event.target.closest('[data-format]')?.dataset.format;
+        if (action) this.format(action);
+      });
+    }
     this.listen(document, 'pointerdown', event => {
-      if (this.menu && !this.menu.contains(event.target) && !event.target.closest('.block-controls')) this.closeMenu();
+      if (this.menu && !this.menu.contains(event.target) && !event.target.closest('.block-controls') && !this.formatbar.contains(event.target) && !this.inline.contains(event.target)) this.closeMenu();
       if (!this.holder.contains(event.target) && !this.inline.contains(event.target) && !event.target.closest('[data-preserve-selection]')) this.inline.hidden = true;
     });
     this.listen(window, 'resize', () => { this.closeMenu(); this.inline.hidden = true; });
@@ -247,15 +344,28 @@ export class RetardEditor extends EventTarget {
       if (event.shiftKey) { this.selected.add(id); row.classList.add('block-selected'); row.querySelector('.block-grip').focus(); }
       else { this.clearSelection(); this.openBlockMenu(id, event.target.closest('button')); }
     } else if (action === 'configure') this.request('configure', { block: clone(block) });
-    else if (action?.startsWith('table-')) this.transaction(() => {
-      const d = block.data;
-      if (action === 'table-row' && d.content.length < 100) d.content.push(Array(d.content[0].length).fill(''));
-      if (action === 'table-column' && d.content[0].length < 30) d.content.forEach(r => r.push(''));
-      if (action === 'table-heading') d.withHeadings = !d.withHeadings;
-      if (action === 'table-delete-row' && d.content.length > 1) d.content.pop();
-      if (action === 'table-delete-column' && d.content[0].length > 1) d.content.forEach(r => r.pop());
-    });
+    else if (action?.startsWith('table-')) this.tableAction(block, action);
   }
+  tableAction(block, action) {
+    const d = block.data;
+    const active = this.activeCell?.id === block.id ? this.activeCell.field.split(':').slice(1).map(Number) : [d.content.length - 1, d.content[0].length - 1];
+    let r = Math.max(0, Math.min(active[0], d.content.length - 1));
+    let c = Math.max(0, Math.min(active[1], d.content[0].length - 1));
+    if (['table-row', 'table-row-above'].includes(action) && d.content.length >= 100) { this.request('notice', 'Tables support up to 100 rows.'); return; }
+    if (['table-column', 'table-column-before'].includes(action) && d.content[0].length >= 30) { this.request('notice', 'Tables support up to 30 columns.'); return; }
+    this.transaction(() => {
+      if (action === 'table-row') { r++; d.content.splice(r, 0, Array(d.content[0].length).fill('')); }
+      if (action === 'table-row-above') d.content.splice(r, 0, Array(d.content[0].length).fill(''));
+      if (action === 'table-column') { c++; d.content.forEach(row => row.splice(c, 0, '')); }
+      if (action === 'table-column-before') d.content.forEach(row => row.splice(c, 0, ''));
+      if (action === 'table-heading') d.withHeadings = !d.withHeadings;
+      if (action === 'table-delete-row' && d.content.length > 1) d.content.splice(r, 1);
+      if (action === 'table-delete-column' && d.content[0].length > 1) d.content.forEach(row => row.splice(c, 1));
+    });
+    r = Math.min(r, d.content.length - 1); c = Math.min(c, d.content[0].length - 1);
+    this.focus(block.id, `cell:${r}:${c}`, 'start');
+  }
+
   keydown(event) {
     if (this.readOnly || this.composing || event.isComposing) return;
     const mod = event.metaKey || event.ctrlKey;
@@ -292,7 +402,7 @@ export class RetardEditor extends EventTarget {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
       if (['paragraph', 'header'].includes(block.type)) this.splitParagraph(field);
-      else if (field.dataset.field === 'text' && block.type === 'quote') document.execCommand('insertLineBreak');
+      else if (field.dataset.field === 'text' && block.type === 'quote') this.insertLineBreak(field);
       else this.insert('paragraph', {}, this.index(block.id) + 1);
     }
     if (event.key === 'Backspace' && caretAt(field, 'start') && ['paragraph', 'header'].includes(block.type)) {
@@ -368,6 +478,7 @@ export class RetardEditor extends EventTarget {
     }
   }
   tableKey(event, block, field) {
+    if (event.key === 'Enter') { event.preventDefault(); this.insertLineBreak(field); return; }
     if (event.key !== 'Tab') return;
     event.preventDefault();
     const [, r, c] = field.dataset.field.split(':').map(Number);
@@ -379,6 +490,15 @@ export class RetardEditor extends EventTarget {
       this.transaction(() => block.data.content.push(Array(width).fill('')));
     }
     this.focus(block.id, `cell:${Math.floor(next / width)}:${next % width}`, 'start');
+  }
+  insertLineBreak(field) {
+    const range = selectionRange(this.holder);
+    if (!range || !field.contains(range.commonAncestorContainer)) return;
+    range.deleteContents();
+    const br = document.createElement('br'); range.insertNode(br);
+    if (!br.nextSibling || (br.nextSibling.nodeType === Node.TEXT_NODE && !br.nextSibling.textContent && !br.nextSibling.nextSibling)) br.after(document.createElement('br'));
+    range.setStartAfter(br); range.collapse(true); restoreRange(range);
+    this.syncRow(field.closest('[data-block-id]')); this.changed();
   }
   crossBlockRange() {
     const range = selectionRange(this.holder);
@@ -463,27 +583,30 @@ export class RetardEditor extends EventTarget {
   showInline() {
     if (this.readOnly || this.composing || this.menu || document.querySelector('dialog[open]')) { this.inline.hidden = true; return; }
     const range = selectionRange(this.holder);
+    this.updateFormatbar();
+    if (range) this.savedRange = range;
     if (!range || range.collapsed || this.crossBlockRange()) { this.inline.hidden = true; return; }
-    const field = range.startContainer.parentElement?.closest('[data-field]');
-    if (!field || ['code', 'html'].includes(field.dataset.field)) { this.inline.hidden = true; return; }
+    const field = (range.startContainer.nodeType === Node.ELEMENT_NODE ? range.startContainer : range.startContainer.parentElement)?.closest('[data-field]');
+    if (!field || !field.contains(range.endContainer) || ['code', 'html'].includes(field.dataset.field)) { this.inline.hidden = true; return; }
     this.savedRange = range;
     const rect = range.getBoundingClientRect();
     this.inline.hidden = false;
+    this.updateFormatbar();
     this.inline.style.left = `${Math.max(8, Math.min(window.innerWidth - this.inline.offsetWidth - 8, rect.left + rect.width / 2 - this.inline.offsetWidth / 2))}px`;
     this.inline.style.top = `${Math.max(8, rect.top - this.inline.offsetHeight - 10)}px`;
-    for (const btn of this.inline.querySelectorAll('[data-format]')) {
-      let active = false;
-      try { active = document.queryCommandState(btn.dataset.format); } catch { active = false; }
-      btn.classList.toggle('active', active);
-    }
   }
-  format(action, value) {
+  format(action, value, label) {
     if (this.readOnly) return;
     const range = selectionRange(this.holder) || this.savedRange;
-    if (!range?.startContainer.isConnected) return;
+    if (!range?.startContainer.isConnected || !this.holder.contains(range.startContainer) || !this.holder.contains(range.endContainer)) { this.request('notice', 'Click in a block and select the text you want to format.'); return; }
+    const field = (range.startContainer.nodeType === Node.ELEMENT_NODE ? range.startContainer : range.startContainer.parentElement)?.closest('[data-field]');
+    if (!field || !field.contains(range.endContainer) || ['code', 'html'].includes(field.dataset.field)) { this.request('notice', 'Select text within one text block, list item, or table cell.'); return; }
     if (action === 'link' && value === undefined) { this.savedRange = range.cloneRange(); this.request('link', { url: range.startContainer.parentElement?.closest('a')?.getAttribute('href') || '', text: range.toString() }); return; }
     if (action === 'footnote' && value === undefined) { this.savedRange = range.cloneRange(); this.request('footnote', {}); return; }
-    if (action === 'color' && value === undefined) { this.savedRange = range.cloneRange(); this.request('color', {}); return; }
+    if (['color', 'background'].includes(action) && value === undefined) {
+      if (range.collapsed) { this.request('notice', 'Select the words you want to colour first.'); return; }
+      this.savedRange = range.cloneRange(); this.request('color', { kind: action }); return;
+    }
     restoreRange(range);
     this.flush();
     if (action === 'footnote') {
@@ -495,24 +618,48 @@ export class RetardEditor extends EventTarget {
       const marker = document.createElement('sup');
       marker.dataset.tune = 'footnotes'; marker.textContent = String(block.tunes.footnotes.length);
       range.collapse(false); range.insertNode(marker); range.setStartAfter(marker); range.collapse(true); restoreRange(range);
-      this.syncAll(); const caret = bookmark(this.holder); this.render(); restoreBookmark(this.holder, caret);
+      this.syncAll(); const caret = bookmark(this.holder); row._editorSignature = null; this.render(); restoreBookmark(this.holder, caret);
     } else if (action === 'link') {
-      if (!value) document.execCommand('unlink');
-      else { const url = safeURL(value); if (!url) { this.request('notice', 'Enter a valid http, https, email, or telephone link.'); return; } document.execCommand('createLink', false, url); }
-    } else if (['mark', 'code', 'sub', 'sup', 'color'].includes(action)) {
+      const existingLink = (range.startContainer.nodeType === Node.ELEMENT_NODE ? range.startContainer : range.startContainer.parentElement)?.closest('a');
+      if (!value && range.collapsed && existingLink) { const caret = bookmark(this.holder); existingLink.replaceWith(...existingLink.childNodes); restoreBookmark(this.holder, caret); }
+      else if (!value) document.execCommand('unlink');
+      else {
+        const url = safeURL(value);
+        if (!url) { this.request('notice', 'Enter a valid http, https, email, or telephone link.'); return; }
+        if (range.collapsed && existingLink && this.holder.contains(existingLink)) { existingLink.href = url; existingLink.target = '_blank'; existingLink.rel = 'noopener noreferrer'; if (label) existingLink.textContent = label; }
+        else if (range.collapsed) { const link = document.createElement('a'); link.href = url; link.textContent = label || url; link.target = '_blank'; link.rel = 'noopener noreferrer'; range.insertNode(link); range.setStartAfter(link); range.collapse(true); restoreRange(range); }
+        else document.execCommand('createLink', false, url);
+      }
+    } else if (action === 'removeFormat' && !range.collapsed) {
+      const before = document.createRange(), after = document.createRange();
+      before.selectNodeContents(field); before.setEnd(range.startContainer, range.startOffset);
+      after.selectNodeContents(field); after.setStart(range.endContainer, range.endOffset);
+      const content = range.cloneContents(), left = before.cloneContents(), right = after.cloneContents();
+      content.querySelectorAll('b,strong,i,em,u,s,strike,mark,code,sub,sup:not([data-tune]),span').forEach(node => node.replaceWith(...node.childNodes));
+      const start = document.createTextNode(''), end = document.createTextNode('');
+      field.replaceChildren(left, start, content, end, right);
+      range.setStartAfter(start); range.setEndBefore(end); start.remove(); end.remove(); restoreRange(range);
+    } else if (['mark', 'code', 'sub', 'sup', 'color', 'background'].includes(action)) {
       if (range.collapsed) return;
-      const tag = action === 'color' ? 'span' : action;
-      const parent = range.startContainer.parentElement?.closest(tag);
-      if (parent && parent.contains(range.endContainer) && action !== 'color') {
+      const tag = action === 'color' ? 'span' : action === 'background' ? 'mark' : action;
+      const parent = (range.startContainer.nodeType === Node.ELEMENT_NODE ? range.startContainer : range.startContainer.parentElement)?.closest(tag);
+      if (parent && parent.contains(range.endContainer) && !['color', 'background'].includes(action)) {
         const content = [...parent.childNodes]; parent.replaceWith(...content);
         const restored = document.createRange(); if (content.length) { restored.setStartBefore(content[0]); restored.setEndAfter(content.at(-1)); restoreRange(restored); }
       } else {
         const element = document.createElement(tag);
-        if (action === 'color') element.style.color = value;
-        element.append(range.extractContents()); range.insertNode(element); range.selectNodeContents(element); restoreRange(range);
+        if (action === 'color') element.style.color = value || 'inherit';
+        if (action === 'background') { element.style.backgroundColor = value || 'transparent'; element.style.color = 'inherit'; }
+        const content = range.extractContents();
+        if (['color', 'background'].includes(action)) {
+          const property = action === 'color' ? 'color' : 'background-color';
+          content.querySelectorAll('[style]').forEach(node => node.style.removeProperty(property));
+          if (action === 'background') content.querySelectorAll('mark').forEach(node => { node.style.backgroundColor = 'transparent'; });
+        }
+        element.append(content); range.insertNode(element); range.selectNodeContents(element); restoreRange(range);
       }
     } else document.execCommand(action, false, value);
-    this.syncAll(); this.changed(true); this.savedRange = selectionRange(this.holder); this.showInline();
+    this.syncAll(); this.changed(true); this.savedRange = selectionRange(this.holder); this.updateFormatbar(); this.showInline();
   }
   checkSlash(field, row) {
     if (!row || !field.matches('[data-field="text"]') || this.getBlock(row.dataset.blockId).type !== 'paragraph') return;
@@ -524,7 +671,8 @@ export class RetardEditor extends EventTarget {
   }
   placeMenu(menu, anchor) {
     const rect = anchor.getBoundingClientRect();
-    menu.style.left = `${Math.max(8, Math.min(window.innerWidth - 330, rect.left))}px`;
+    const width = Math.min(menu.offsetWidth || 310, window.innerWidth - 16);
+    menu.style.left = `${Math.max(8, Math.min(window.innerWidth - width - 8, rect.left))}px`;
     const below = window.innerHeight - rect.bottom;
     menu.style.maxHeight = `${Math.max(160, Math.min(390, Math.max(below, rect.top) - 18))}px`;
     if (below < 240 && rect.top > below) { menu.style.bottom = `${window.innerHeight - rect.top + 6}px`; menu.style.top = 'auto'; }
@@ -561,7 +709,8 @@ export class RetardEditor extends EventTarget {
   chooseTool(index) {
     const tool = this.filteredTools[index];
     const { id, slash, convert } = this.menuContext;
-    if (slash || convert) {
+    const block = this.getBlock(id);
+    if (slash || convert || (block.type === 'paragraph' && !plainText(block.data.text))) {
       if (slash) { const field = this.row(id)?.querySelector('[data-field="text"]'); if (field) field.innerHTML = ''; this.syncRow(this.row(id)); }
       this.convert(id, tool.type, tool.data);
     } else this.insert(tool.type, tool.data, this.index(id) + 1);
@@ -576,9 +725,11 @@ export class RetardEditor extends EventTarget {
     if (['embed', 'attaches', 'audio', 'video', 'linkTool'].includes(block.type)) actions.push(['settings', 'Edit media', 'configure']);
     if (block.tunes.footnotes?.length) actions.push(['book', 'Edit footnotes', 'footnotes']);
     actions.push(['trash', 'Delete block', 'delete']);
-    this.menu.innerHTML = `<div class="menu-label">${escapeHTML(this.registry.get(block.type).title)}</div>${actions.map(([glyph, label, action]) => `<button role="menuitem" data-tune="${action}" class="${action === 'delete' ? 'danger' : ''}">${icon(glyph, 16)}<span>${label}</span>${action === 'duplicate' ? '<kbd>⌘⇧D</kbd>' : ''}</button>`).join('')}`;
+    this.menu.innerHTML = `<div class="menu-label">${escapeHTML(this.registry.get(block.type).title)}</div>${block.type === 'header' ? `<div class="heading-level-grid">${[1, 2, 3, 4, 5, 6].map(level => `<button type="button" data-heading-level="${level}" aria-label="Heading ${level}" aria-pressed="${block.data.level === level}" class="${block.data.level === level ? 'selected' : ''}">H<span>${level}</span></button>`).join('')}</div>` : ''}${actions.map(([glyph, label, action]) => `<button role="menuitem" data-tune="${action}" class="${action === 'delete' ? 'danger' : ''}">${icon(glyph, 16)}<span>${label}</span>${action === 'duplicate' ? '<kbd>⌘⇧D</kbd>' : ''}</button>`).join('')}`;
     document.body.append(this.menu); this.placeMenu(this.menu, anchor);
     this.menu.addEventListener('click', event => {
+      const level = event.target.closest('[data-heading-level]')?.dataset.headingLevel;
+      if (level) { this.convert(id, 'header', { level: Number(level) }); return; }
       const action = event.target.closest('[data-tune]')?.dataset.tune;
       if (!action) return;
       if (action === 'convert') { this.openToolbox(id, anchor, false, true); return; }

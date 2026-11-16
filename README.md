@@ -22,10 +22,10 @@ Open **dist/index.html** in a modern browser. This HTML file includes the JavaSc
 
 ## Included
 
-- 23 block insertion choices: paragraphs, H1–H6, nested bulleted/numbered lists, checklists, quotes, callouts, dividers, images, tables, code, raw HTML source, video embeds, bookmarks, attachments, toggles, audio, and video files.
-- Inline bold, italic, underline, strikethrough, highlighting, code, links, colour, subscript, superscript, footnotes, and clearing formatting.
+- 18 block insertion choices: paragraphs, one Heading entry with H1–H6 controls, nested bulleted/numbered lists, checklists, quotes, callouts, dividers, images, tables, code, raw HTML source, video embeds, bookmarks, attachments, toggles, audio, and video files.
+- Persistent horizontal and selection toolbars with bold, italic, underline, strikethrough, code, explicit Link/URL editing, text colour, background colour, subscript, superscript, footnotes, and clearing formatting.
 - A searchable slash menu, keyboard navigation, Markdown shortcuts, block conversion, duplication, moving, drag reordering, alignment, and multi-block selection.
-- Paragraph splitting/merging, list indentation, table cell navigation, row/column controls, cross-block selection deletion, clipboard import, and a separate undo/redo history.
+- Paragraph splitting/merging, list indentation, editable table cells, Tab navigation, line breaks, row/column insertion before or after the selected cell, selected row/column deletion, cross-block selection deletion, clipboard import, and a separate undo/redo history.
 - Image upload/URLs, captions, alternative text, borders, backgrounds, and full-width display. File uploads and pasted/dropped files are stored locally, up to 10 MB each.
 - A document workspace with titles, search, autosave, local version history, outline, word counts, preview, JSON inspection, dark mode, focus mode, and responsive layouts.
 - JSON, Markdown, HTML, and plain-text export. JSON, Markdown, HTML, and text import creates a new document without replacing existing work.
@@ -72,10 +72,12 @@ npm run check
 npm run build
 ```
 
-- `npm test`: 32 Node tests for schema validation, URL policy, IDs, nested lists, limits, history, and statistics.
+- `npm test`: 45 Node tests for schema validation, URL policy, IDs, nested lists, limits, history, statistics, scoped click routing, and table operations.
 - `npm run check`: syntax checks for source, build scripts, and tests.
-- Open `http://localhost:5173/tests/browser.html`, or `dist/browser-tests.html` after a build, for 27 disposable DOM integration tests. These do not access the document database.
+- Open `http://localhost:5173/tests/browser.html`, or `dist/browser-tests.html` after a build, for 46 disposable DOM integration tests. These do not access the document database.
 
-**Validation status:** Node tests, source syntax, generated bundle syntax, TypeScript declarations, and the build were run successfully during implementation. Browser integration tests and visual QA could not be executed in the development session: local port binding was denied, headless Chrome could not launch, and the available browser surface disallowed local-file navigation. Native selection, clipboard, drag-and-drop, IME, mobile keyboards, and Safari/Firefox behaviour need real-browser verification before production use. Basic browser editing commands use `document.execCommand`, which is deprecated and should be covered by that browser matrix.
+**Validation status (16 November 2026):** All 45 Node tests and all 46 browser integration tests passed in the connected Chrome browser. Source syntax, generated bundle syntax, TypeScript declarations, and the build also passed. Manual workspace checks confirmed the plus menu, heading settings, and real table typing; the temporary typing change was undone. Firefox, Safari, native clipboard, drag-and-drop, IME, and mobile keyboard behaviour still require a wider browser pass. Basic browser editing commands use `document.execCommand`, which is deprecated.
+
+The click/focus fix scopes view changes to the actual Write/Preview/JSON tabs. The editor also preserves unchanged block DOM during structural changes. Link and colour dialogs restore the original selection after closing. See [docs/EDITOR_RESEARCH.md](docs/EDITOR_RESEARCH.md) for the upstream issues and design references behind this pass.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the researched design and implementation boundaries.

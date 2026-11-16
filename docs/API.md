@@ -32,7 +32,8 @@ const documentData = await editor.save();
 | `duplicate(id)` | Copy a block under a new ID |
 | `convert(id, type, data)` | Convert a block and preserve its text where applicable |
 | `focus(id, field, side)` | Focus a field at `start` or `end` |
-| `setReadOnly(boolean)` | Switch editability |
+| `setReadOnly(boolean)` | Switch editability; repeating the current state preserves DOM and focus |
+| `format(action, value, label)` | Apply inline formatting; optional label inserts a named link at the caret |
 | `undo()` / `redo()` | Navigate model history |
 | `registerTool(name, tool)` | Register a custom block renderer |
 | `destroy()` | Remove editor DOM, timers, overlays, and listeners |
@@ -61,14 +62,14 @@ editor.addEventListener('notice', event => {
 | --- | --- |
 | `configure` | `{ block }`; use `update(block.id, data)` after obtaining media data |
 | `files` | `{ files, index }`; process uploads and call `insert` |
-| `link` | `{ url, text }`; apply with `format('link', url)` |
-| `color` | Choose a CSS colour; apply with `format('color', colour)` |
+| `link` | `{ url, text }`; apply with `format('link', url, optionalLabel)`, or an empty URL to remove a link |
+| `color` | `{ kind }`, where kind is `color` or `background`; apply with `format(event.detail.kind, colour)` |
 | `footnote` | Collect a note; apply with `format('footnote', text)` |
 | `footnotes` | `{ block }`; open an editor for its notes |
 | `notice` | A human-readable status message |
 | `change` | Current `{ time, version, blocks }` |
 
-The workspace in `src/app.js` contains working implementations of these handlers. External media/file operations should capture their originating document before awaiting network or file operations.
+The workspace wires these events in `src/app.js`; `src/ui/formatting-dialogs.js` supplies the link and colour dialogs. `formatOnClose` in `src/ui/dialog.js` restores the saved range after the dialog returns focus, then applies the change. Applying native commands while a modal still has focus can lose the selected text. The persistent toolbar is inserted immediately before the holder and removed by `destroy()`. External media/file operations should capture their originating document before awaiting network or file operations.
 
 ## Custom block
 

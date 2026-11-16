@@ -5,8 +5,10 @@ import { plainText } from './core/sanitize.js';
 import { listDocuments, saveDocument, removeDocument, saveRevision, allRevisions, removeRevision } from './core/storage.js';
 import { toolChoices } from './tools/registry.js';
 import { icon, button } from './ui/icons.js';
-import { dialog, toast, download } from './ui/dialog.js';
+import { dialog, toast, download, formatOnClose } from './ui/dialog.js';
 import { welcomeDocument, projectDocument } from './demo.js';
+import { linkDialog, colorDialog } from './ui/formatting-dialogs.js';
+import { viewFromClick } from './ui/workspace-events.js';
 
 const app = document.getElementById('app');
 app.innerHTML = `
@@ -14,7 +16,7 @@ app.innerHTML = `
   <a href="./index.html" class="brand" aria-label="Retard editor home"><img src="/public/favicon.svg" alt="" width="33" height="33"><span>retard<span class="brand-dot">.</span></span><span class="brand-tag">editor</span></a>
   <button class="workspace-switch" data-action="workspace"><span class="workspace-avatar">P</span><span><strong>Personal workspace</strong><small>A little room to create</small></span>${icon('chevron', 15)}</button>
   <button class="search-launch" data-action="search">${icon('search', 17)}<span>Search anything</span><kbd>⌘ K</kbd></button>
-  <nav class="main-navigation"><button class="nav-link active" data-action="documents">${icon('folder')}<span>My documents</span><span class="document-count">2</span></button><button class="nav-link" data-action="tools">${icon('code')}<span>Block library</span><span class="new-label">23</span></button></nav>
+  <nav class="main-navigation"><button class="nav-link active" data-action="documents">${icon('folder')}<span>My documents</span><span class="document-count">2</span></button><button class="nav-link" data-action="tools">${icon('code')}<span>Block library</span><span class="new-label">18</span></button></nav>
   <div class="sidebar-section-label"><span>YOUR DOCUMENTS</span>${button('plus', 'New document', 'new')}</div>
   <div id="document-list" class="document-list"></div>
   <button class="new-document" data-action="new">${icon('plus', 16)}<span>New document</span></button>
@@ -113,10 +115,10 @@ async function openDocument(doc) {
   editor.addEventListener('notice', event => toast(event.detail));
   editor.addEventListener('configure', event => configureMedia(event.detail.block));
   editor.addEventListener('files', event => insertFiles(event.detail));
-  editor.addEventListener('link', event => linkDialog(event.detail));
-  editor.addEventListener('color', () => colorDialog());
+  editor.addEventListener('link', event => linkDialog(editor, event.detail));
+  editor.addEventListener('color', event => colorDialog(editor, event.detail.kind || 'color'));
   editor.addEventListener('footnotes', event => { const block = event.detail.block; dialog({ title: 'Edit footnotes', body: block.tunes.footnotes.map((note, i) => `<label class="field-label">Note ${i + 1}<textarea name="note-${i}" rows="2">${e(plainText(note))}</textarea></label>`).join(''), onSubmit: data => editor.transaction(() => { editor.getBlock(block.id).tunes.footnotes = block.tunes.footnotes.map((_, i) => e(String(data.get(`note-${i}`)))); }) }); });
-  editor.addEventListener('footnote', () => dialog({ title: 'Add a footnote', description: 'A little extra context, without interrupting the thought.', body: '<label class="field-label">Note<textarea name="note" rows="3" required autofocus></textarea></label>', submit: 'Add footnote', onSubmit: data => editor.format('footnote', String(data.get('note'))) }));
+  editor.addEventListener('footnote', () => dialog({ title: 'Add a footnote', description: 'A little extra context, without interrupting the thought.', body: '<label class="field-label">Note<textarea name="note" rows="3" required autofocus></textarea></label>', submit: 'Add footnote', onSubmit: (data, modal) => formatOnClose(modal, editor, 'footnote', String(data.get('note'))) }));
   window.retardEditor = editor;
   loading = false;
   current.data = editor.getData();
@@ -133,8 +135,8 @@ function setView(view) {
   el('editor').hidden = json; el('json-view').hidden = !json;
   el('document-title').readOnly = view !== 'write';
   if (json) el('json-code').textContent = JSON.stringify(editor.getData(), null, 2);
-  document.querySelectorAll('[data-view]').forEach(btn => { btn.classList.toggle('active', btn.dataset.view === view); btn.setAttribute('aria-selected', String(btn.dataset.view === view)); });
-  document.body.dataset.view = view; updateStats();
+  app.querySelectorAll('.view-tabs button[role="tab"][data-view]').forEach(btn => { btn.classList.toggle('active', btn.dataset.view === view); btn.setAttribute('aria-selected', String(btn.dataset.view === view)); });
+  document.body.dataset.editorView = view; updateStats();
 }
 async function createDocument(template = false) {
   const doc = template ? projectDocument() : { id: uid(), title: '', icon: 'file', cover: false, createdAt: Date.now(), updatedAt: Date.now(), data: { blocks: [makeBlock()] } };
@@ -211,18 +213,6 @@ function deleteDialog() {
     if (!docs.length) await createDocument(); else await openDocument(docs[0]);
     toast('Document deleted');
   } });
-}
-function linkDialog({ url }) {
-  dialog({ title: 'Add a link', description: 'Give your words somewhere to go. Leave empty to remove a link.', body: `<label class="field-label">URL<input name="url" value="${e(url)}" placeholder="https://example.com" autofocus></label>`, submit: 'Apply link', onSubmit: data => {
-    const value = String(data.get('url')).trim();
-    if (value && !safeURL(value)) throw new Error('Enter a valid http, https, email, or telephone URL.');
-    editor.format('link', value);
-  } });
-}
-function colorDialog() {
-  const colors = ['#292934', '#797985', '#d14545', '#d07830', '#23886a', '#3378ce', '#7563dc', '#c25299'];
-  const modal = dialog({ title: 'A little colour', description: 'Choose a text colour for your selection.', submit: null, body: `<div class="colour-options">${colors.map(color => `<button data-color="${color}" style="--swatch:${color}" aria-label="Text colour ${color}"></button>`).join('')}</div>` });
-  modal.addEventListener('click', event => { const color = event.target.closest('[data-color]')?.dataset.color; if (color) { editor.format('color', color); modal.close(); } });
 }
 function readFile(file) {
   if (file.size > 10 * 1024 * 1024) return Promise.reject(new Error('Choose a file smaller than 10 MB.'));
@@ -301,7 +291,8 @@ el('import-file').addEventListener('change', async event => {
 app.addEventListener('click', async event => {
   const docId = event.target.closest('[data-document]')?.dataset.document;
   if (docId && docId !== current.id) { await openDocument(docs.find(doc => doc.id === docId)); return; }
-  const view = event.target.closest('[data-view]')?.dataset.view; if (view) setView(view);
+  const view = viewFromClick(event.target, app);
+  if (view && view !== mode) { setView(view); return; }
   const scroll = event.target.closest('[data-scroll]')?.dataset.scroll;
   if (scroll) { if (mode === 'json') setView('write'); editor.row(scroll)?.scrollIntoView({ behavior: 'smooth', block: 'center' }); document.querySelectorAll('[data-scroll]').forEach(btn => btn.classList.toggle('active', btn.dataset.scroll === scroll)); }
   const action = event.target.closest('[data-action]')?.dataset.action;
