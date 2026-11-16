@@ -2,6 +2,8 @@ import { RetardEditor } from '../src/core/editor.js';
 import { makeBlock } from '../src/core/model.js';
 import { sanitizeHTML } from '../src/core/sanitize.js';
 import { fromHTML, fromMarkdown, toHTML, toMarkdown } from '../src/core/serialization.js';
+import { viewFromClick } from '../src/ui/workspace-events.js';
+import { linkDialog, colorDialog } from '../src/ui/formatting-dialogs.js';
 import { setCaret, restoreBookmark } from '../src/core/selection.js';
 
 const results = [], report = document.getElementById('report'), fixture = document.getElementById('fixture');
@@ -150,6 +152,155 @@ await test('custom tools render, save, and survive import', async () => {
   reset(); editor.registerTool('rating', { title: 'Rating', icon: 'sparkle', render: data => `<div data-rating="${data.value}">Rating ${data.value}</div>`, save: el => ({ value: Number(el.querySelector('[data-rating]').dataset.rating) }) });
   editor.insert('rating', { value: 5 }); const doc = editor.getData(); await editor.load(doc); equal(editor.getData().blocks.at(-1).data.value, 5);
 });
+await test('ordinary workspace clicks never switch views or rebuild focused blocks', () => {
+  reset([makeBlock('paragraph', { text: 'Keep focus' }), makeBlock('table', { content: [['Cell']] })]);
+  const originalView = document.body.dataset.view;
+  document.body.dataset.view = 'write';
+  let switches = 0;
+  const route = event => { if (viewFromClick(event.target, document.body)) switches++; };
+  document.body.addEventListener('click', route);
+  try {
+    const paragraph = field(), cell = field(1), otherRow = editor.row(editor.blocks[1].id);
+    paragraph.focus(); paragraph.click(); input(paragraph, 'Still typing');
+    assert(document.activeElement === paragraph); assert(field() === paragraph);
+    cell.focus(); cell.click(); input(cell, 'Editable cell');
+    assert(document.activeElement === cell); assert(editor.row(editor.blocks[1].id) === otherRow);
+    equal(switches, 0); equal(editor.blocks[1].data.content, [['Editable cell']]);
+  } finally {
+    document.body.removeEventListener('click', route);
+    if (originalView === undefined) delete document.body.dataset.view; else document.body.dataset.view = originalView;
+  }
+});
+await test('plus opens a usable toolbox and replaces an empty paragraph', () => {
+  reset(); fixture.querySelector('.block-add svg').dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  assert(editor.menu?.isConnected); equal(editor.filteredTools.filter(tool => tool.type === 'header').length, 1);
+  const index = editor.filteredTools.findIndex(tool => tool.type === 'header');
+  editor.menu.querySelector(`[data-choice="${index}"]`).click();
+  equal(editor.blocks.length, 1); equal(editor.blocks[0].type, 'header'); assert(!editor.menu);
+});
+await test('block settings expose heading levels horizontally and retain words', () => {
+  reset([makeBlock('header', { level: 2, text: 'A heading' })]);
+  fixture.querySelector('.block-grip').click();
+  equal(editor.menu.querySelectorAll('.heading-level-grid button').length, 6);
+  editor.menu.querySelector('[data-heading-level="4"]').click();
+  equal(editor.blocks[0].data, { text: 'A heading', level: 4 }); assert(fixture.querySelector('h4'));
+});
+await test('the persistent toolbar changes text style without dropping content', () => {
+  reset([makeBlock('paragraph', { text: '<b>Keep this</b>' })]); editor.focus(editor.blocks[0].id);
+  editor.formatbar.querySelector('[data-type-menu]').click(); editor.menu.querySelector('[data-level="3"]').click();
+  equal(editor.blocks[0].data.text, '<b>Keep this</b>'); equal(editor.blocks[0].data.level, 3);
+  equal(editor.formatbar.querySelector('[data-type-label]').textContent, 'Heading 3');
+});
+await test('no-op renders and repeated write mode preserve the caret and field identities', () => {
+  reset([makeBlock('paragraph', { text: 'Focus' }), makeBlock('paragraph', { text: 'Other' })]);
+  const first = field(), second = field(1); select(first, 2, 2);
+  editor.render(); editor.setReadOnly(false);
+  assert(first === field()); assert(second === field(1)); assert(document.activeElement === first);
+  equal(window.getSelection().anchorOffset, 2);
+});
+await test('inserting, updating, moving, and deleting a sibling preserves untouched DOM', () => {
+  reset([makeBlock('paragraph', { text: 'Stable' }), makeBlock('paragraph', { text: 'Change' })]);
+  const stableId = editor.blocks[0].id, stable = editor.row(stableId);
+  const inserted = editor.insert('paragraph', { text: 'Before' }, 0); assert(editor.row(stableId) === stable);
+  editor.update(inserted.id, { text: 'Updated' }); assert(editor.row(stableId) === stable);
+  editor.move(inserted.id, 2); assert(editor.row(stableId) === stable);
+  editor.delete(inserted.id); assert(editor.row(stableId) === stable);
+  equal([...fixture.querySelectorAll('[data-block-id]')].map(row => row.dataset.blockId), editor.blocks.map(block => block.id));
+});
+await test('table controls act on the selected row and column and retain surrounding blocks', () => {
+  reset([makeBlock('paragraph', { text: 'Stable' }), makeBlock('table', { content: [['A', 'B'], ['C', 'D']] })]);
+  const stable = field(); editor.focus(editor.blocks[1].id, 'cell:0:0');
+  fixture.querySelector('[data-block-action="table-row-above"]').click();
+  equal(editor.blocks[1].data.content, [['', ''], ['A', 'B'], ['C', 'D']]);
+  fixture.querySelector('[data-block-action="table-column-before"]').click();
+  equal(editor.blocks[1].data.content, [['', '', ''], ['', 'A', 'B'], ['', 'C', 'D']]);
+  fixture.querySelector('[data-block-action="table-delete-row"]').click();
+  fixture.querySelector('[data-block-action="table-delete-column"]').click();
+  equal(editor.blocks[1].data.content, [['A', 'B'], ['C', 'D']]); assert(stable === field());
+  assert(document.activeElement === field(1, '[data-field="cell:0:0"]'));
+});
+await test('table Enter inserts a line break and does not create a document block', () => {
+  reset([makeBlock('table', { content: [['One']] })]); setCaret(field()); key(field(), 'Enter');
+  equal(editor.blocks.length, 1); assert(editor.getData().blocks[0].data.content[0][0].includes('<br>'));
+});
+await test('Link opens the actual URL dialog and applies to the restored selection', async () => {
+  reset([makeBlock('paragraph', { text: 'Hello world' })]); select(field(), 0, 5);
+  let modal;
+  const notices = []; editor.addEventListener('notice', event => notices.push(event.detail));
+  editor.addEventListener('link', event => { modal = linkDialog(editor, event.detail); }, { once: true });
+  editor.formatbar.querySelector('[data-format="link"]').click(); assert(modal.open);
+  modal.querySelector('[name="url"]').value = 'https://example.com';
+  const closed = new Promise(resolve => modal.addEventListener('close', () => requestAnimationFrame(resolve), { once: true }));
+  modal.querySelector('form').requestSubmit(); await closed;
+  assert(field().querySelector('a'), `Missing link: ${field().innerHTML}; selection: ${window.getSelection()}; notices: ${notices.join('; ')}`); equal(field().querySelector('a').textContent, 'Hello'); equal(field().textContent, 'Hello world');
+  assert(editor.getData().blocks[0].data.text.includes('href="https://example.com/"'));
+});
+await test('links can be inserted, edited, and removed at a collapsed caret', () => {
+  reset([makeBlock('paragraph', { text: 'Visit ' })]); setCaret(field()); editor.format('link', 'https://example.com', 'Example');
+  equal(field().querySelector('a').textContent, 'Example'); equal(field().textContent, 'Visit Example');
+  setCaret(field().querySelector('a')); editor.format('link', 'https://example.org');
+  equal(field().querySelectorAll('a').length, 1); equal(field().querySelector('a').href, 'https://example.org/');
+  editor.format('link', ''); assert(!field().querySelector('a')); equal(field().textContent, 'Visit Example');
+});
+await test('the real colour dialog preserves selection while switching tabs and applying a swatch', async () => {
+  reset([makeBlock('paragraph', { text: 'Colour these words' })]); select(field(), 0, 6);
+  let modal;
+  const notices = []; editor.addEventListener('notice', event => notices.push(event.detail));
+  editor.addEventListener('color', event => { modal = colorDialog(editor, event.detail.kind); }, { once: true });
+  editor.formatbar.querySelector('[data-format="color"]').click(); assert(modal.open);
+  modal.querySelector('[data-colour-tab="background"]').click();
+  equal(modal.querySelector('[data-colour-tab="background"]').getAttribute('aria-selected'), 'true');
+  const closed = new Promise(resolve => modal.addEventListener('close', () => requestAnimationFrame(resolve), { once: true }));
+  modal.querySelector('[data-color="#fff0ab"]').click(); await closed;
+  assert(field().querySelector('mark'), `Missing highlight: ${field().innerHTML}; selection: ${window.getSelection()}; notices: ${notices.join('; ')}`); equal(field().querySelector('mark').textContent, 'Colour'); assert(field().querySelector('mark').style.backgroundColor);
+  equal(field().textContent, 'Colour these words');
+});
+await test('text and background colours survive save, load, and HTML export together', async () => {
+  reset([makeBlock('paragraph', { text: 'Paint me' })]); select(field());
+  editor.format('color', '#d14545'); editor.format('background', '#d5f2e4');
+  const data = editor.getData(); assert(data.blocks[0].data.text.includes('background-color')); assert(data.blocks[0].data.text.includes('color:'));
+  await editor.load(data); equal(editor.getData().blocks, data.blocks);
+  assert(toHTML(data.blocks).includes('background-color')); equal(field().textContent, 'Paint me');
+});
+await test('clear formatting removes colour, highlight, and code but retains the text', () => {
+  reset([makeBlock('paragraph', { text: 'Before <mark style="background-color: yellow"><b><code>styled</code></b></mark> after' })]);
+  const range = document.createRange(); range.selectNodeContents(field());
+  window.getSelection().removeAllRanges(); window.getSelection().addRange(range); editor.format('removeFormat');
+  equal(field().innerHTML, 'Before styled after');
+});
+await test('inline formatting never wraps multiple table cells or document blocks', () => {
+  reset([makeBlock('table', { content: [['A', 'B']] })]);
+  const range = document.createRange(); range.setStart(field().firstChild, 0); range.setEnd(field(0, '[data-field="cell:0:1"]').firstChild, 1);
+  window.getSelection().removeAllRanges(); window.getSelection().addRange(range); editor.format('background', '#fff0ab');
+  equal(editor.getData().blocks[0].data.content, [['A', 'B']]); equal(fixture.querySelectorAll('td,th').length, 2);
+});
+await test('colour sanitization preserves safe colours and discards unrelated CSS', () => {
+  const output = sanitizeHTML('<span style="color:red;background-color:#ff0;background-image:url(https://example.com/x);position:fixed" onclick="bad()">Safe</span>');
+  assert(output.includes('color: red')); assert(output.includes('background-color:'));
+  assert(!output.includes('background-image')); assert(!output.includes('position:')); assert(!output.includes('onclick'));
+});
+await test('footnotes display immediately without rebuilding unrelated blocks', () => {
+  reset([makeBlock('paragraph', { text: 'Words' }), makeBlock('paragraph', { text: 'Stable' })]);
+  const stable = field(1); select(field()); editor.format('footnote', 'Source');
+  assert(fixture.querySelector('.block-footnotes')?.textContent.includes('Source')); assert(field(1) === stable);
+});
+await test('empty-field caret bookmarks survive structural transactions', () => {
+  reset([makeBlock(), makeBlock('paragraph', { text: 'Other' })]);
+  const first = field(); setCaret(first); editor.update(editor.blocks[1].id, { text: 'Updated' });
+  assert(document.activeElement === first); assert(first.contains(window.getSelection().anchorNode));
+});
+await test('undoing the first typed edit restores a caret in the edited table cell', () => {
+  reset([makeBlock('table', { content: [['Before']] })]);
+  setCaret(field()); input(field(), 'Before typing'); setCaret(field()); editor.undo();
+  equal(field().textContent, 'Before'); assert(document.activeElement === field());
+  assert(field().contains(window.getSelection().anchorNode));
+});
+await test('read-only mode and destroy hide and remove both toolbars', () => {
+  reset(); const toolbar = editor.formatbar, bubble = editor.inline;
+  editor.setReadOnly(true); assert(toolbar.hidden); editor.setReadOnly(false); assert(!toolbar.hidden);
+  editor.destroy(); assert(!toolbar.isConnected); assert(!bubble.isConnected);
+});
+
 editor?.destroy();
 const failures = results.filter(r => !r.passed);
 report.textContent = `${results.length - failures.length}/${results.length} browser tests passed\n\n${results.map(r => `${r.passed ? 'PASS' : 'FAIL'} ${r.name}${r.error ? `\n${r.error}` : ''}`).join('\n')}`;

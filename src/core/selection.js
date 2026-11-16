@@ -43,7 +43,8 @@ export function splitAtCaret(element) {
 }
 export function bookmark(root) {
   const selection = window.getSelection();
-  const field = selection?.anchorNode?.parentElement?.closest('[data-field]');
+  const node = selection?.anchorNode;
+  const field = (node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement)?.closest('[data-field]');
   if (!field || !root.contains(field)) return null;
   const range = document.createRange();
   range.selectNodeContents(field);

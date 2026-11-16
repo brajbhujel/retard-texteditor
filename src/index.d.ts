@@ -67,7 +67,7 @@ export class RetardEditor extends EventTarget {
   undo(): void;
   redo(): void;
   registerTool(name: string, tool: Tool): this;
-  format(action: string, value?: string): void;
+  format(action: string, value?: string, label?: string): void;
   destroy(): void;
 }
 export class ToolRegistry {

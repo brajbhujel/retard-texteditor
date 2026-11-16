@@ -12,11 +12,13 @@ export function sanitizeHTML(input) {
       if (!tags.has(node.tagName)) { node.replaceWith(...node.childNodes); continue; }
       const href = node.tagName === 'A' ? safeURL(node.getAttribute('href')) : '';
       const color = node.style.color;
+      const background = node.style.backgroundColor;
       const footnote = node.tagName === 'SUP' && node.getAttribute('data-tune') === 'footnotes';
       for (const attr of [...node.attributes]) node.removeAttribute(attr.name);
       if (footnote) node.setAttribute('data-tune', 'footnotes');
       if (href) { node.setAttribute('href', href); node.setAttribute('target', '_blank'); node.setAttribute('rel', 'noopener noreferrer'); }
-      if (node.tagName === 'SPAN' && /^(#[\da-f]{3,8}|rgba?\([\d\s,.%]+\)|[a-z]+)$/i.test(color)) node.style.color = color;
+      if (['SPAN', 'MARK'].includes(node.tagName) && /^(#[\da-f]{3,8}|rgba?\([\d\s,.%]+\)|[a-z]+)$/i.test(color)) node.style.color = color;
+      if (['SPAN', 'MARK'].includes(node.tagName) && /^(#[\da-f]{3,8}|rgba?\([\d\s,.%]+\)|[a-z]+)$/i.test(background)) node.style.backgroundColor = background;
     }
   }
   clean(template.content);

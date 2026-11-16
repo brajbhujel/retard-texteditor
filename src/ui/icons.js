@@ -1,10 +1,12 @@
 const paths = {
+  paint: '<path d="m8 3 10 10-7 7a3 3 0 0 1-4 0l-4-4a3 3 0 0 1 0-4l7-7M3 13h15M19 16c0 0-2 3-2 4a2 2 0 0 0 4 0c0-1-2-4-2-4Z"/>',
+  eraser: '<path d="m14 3 7 7-11 11H6l-5-5L14 3Zm-8 8 7 7M10 21h12"/>',
   plus: '<path d="M12 5v14M5 12h14"/>', minus: '<path d="M5 12h14"/>', close: '<path d="m6 6 12 12M6 18 18 6"/>',
   chevron: '<path d="m8 10 4 4 4-4"/>', right: '<path d="m9 6 6 6-6 6"/>', arrow: '<path d="M5 12h14m-5-5 5 5-5 5"/>',
   file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Zm0 0v6h6M8 13h8M8 17h5"/>',
   folder: '<path d="M3 7V5a2 2 0 0 1 2-2h5l2 3h7a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>',
   search: '<circle cx="10" cy="10" r="7"/><path d="m15 15 6 6"/>', settings: '<path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/>',
-  text: '<path d="M4 5h16M12 5v15M8 20h8"/>', heading: '<path d="M5 4v16M19 4v16M5 12h14"/>',
+  text: '<path d="M4 5h16M4 10h16M4 15h10M4 20h13"/>', heading: '<path d="M4 4v12M14 4v12M4 10h10M3 21h18M19 5v9m-2-7 2-2 2 2"/>',
   list: '<path d="M9 6h12M9 12h12M9 18h12"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/>',
   ordered: '<path d="M9 6h12M9 12h12M9 18h12M3 3h1v6M2 9h4M2 15q4-3 4 0l-4 6h4"/>',
   check: '<path d="m5 12 4 4L19 6"/>', checklist: '<rect x="3" y="4" width="7" height="7" rx="2"/><path d="m4 7 2 2 4-5M14 7h7M14 17h7"/><rect x="3" y="14" width="7" height="7" rx="2"/>',

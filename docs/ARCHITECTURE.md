@@ -21,7 +21,7 @@ References:
 
 `src/core/model.js` owns the serializable block data, validation, list conversion, URL validation, statistics, and bounded history. Imported objects are copied, checked, and normalized. IDs are unique. A document always retains at least one block. Invalid or unsupported blocks cause an explicit import error rather than silently losing content.
 
-`src/core/editor.js` owns the interactive lifecycle. Each block has one or more `contenteditable` fields. Input events synchronize the edited block into the model without replacing the active DOM, so ordinary typing does not continually reset the caret. Structural changes synchronize pending input, mutate the block array, rerender, and restore focus.
+`src/core/editor.js` owns the interactive lifecycle. Each block has one or more `contenteditable` fields. Input events synchronize the edited block into the model without replacing the active DOM, so ordinary typing does not continually reset the caret. Structural changes synchronize pending input, mutate the block array, and reconcile rows by block ID and a data signature. Unchanged rows keep their DOM identity; only changed rows are replaced, after which the caret is restored. Reapplying the current read-only state is a no-op. Workspace view routing is restricted to actual tab buttons, so editor clicks cannot trigger a document render.
 
 `src/core/selection.js` wraps DOM Selection and Range operations. It records a block ID, field path, and character offset for history restoration. Paragraph splitting uses cloned ranges so inline markup can survive a split. Cross-block replacement retains the unselected prefix and suffix in a paragraph.
 
@@ -35,7 +35,7 @@ References:
 
 ## Formatting and history
 
-Native browser commands apply basic inline formatting and paste insertion. Range manipulation handles code, highlight, subscript, superscript, colour, and footnotes. `execCommand` is deprecated; it remains a compatibility dependency of this initial implementation, not a claim of a new browser editing standard.
+Native browser commands apply basic inline formatting and paste insertion. Range manipulation handles code, highlight, subscript, superscript, colour, line breaks, and footnotes. Formatting is restricted to one rich-text field at a time, including a single table cell. Persistent and floating toolbars retain their DOM and update their button state. Link and colour dialogs clone the range and restore it after closing before applying formatting. `execCommand` is deprecated; it remains a compatibility dependency of this initial implementation, not a claim of a new browser editing standard.
 
 Undo/redo belongs to the editor model. Text snapshots are debounced, while structural edits and formatting produce immediate checkpoints. Redo is invalidated when a new edit branches from an older snapshot. History is capped at 100 states. Local document snapshots are a separate IndexedDB feature and survive page reloads.
 
@@ -43,7 +43,7 @@ Undo/redo belongs to the editor model. Text snapshots are debounced, while struc
 
 ## Tools
 
-`src/tools/registry.js` defines the built-in tools and the custom tool contract. A tool returns markup through `render`, and optionally reads its DOM through `save`. Built-in tools use delegated listeners, so full block rerenders do not accumulate per-block listeners.
+`src/tools/registry.js` defines the built-in tools and the custom tool contract. A tool returns markup through `render`, and optionally reads its DOM through `save`. Built-in tools use delegated listeners, so replacing a changed block does not accumulate per-block listeners.
 
 This tool API is intentionally smaller than Editor.js's class-based API. It does not emulate every core API object, every plugin lifecycle hook, or arbitrary third-party plugins. Registering a custom tool is trusted application code. Its renderer must escape untrusted values.
 
@@ -67,11 +67,11 @@ This is client-side defence for a local editor. A server integration should inde
 
 The project uses native ES modules with no installed runtime dependencies. The Node server serves the source on loopback. The build script assembles modules in dependency order and produces a self-contained HTML file plus a standalone browser test page. It is a small build script for this source tree, not a general JavaScript bundler.
 
-Node tests cover validation, history, nesting, safety policies, IDs, and statistics. Browser tests cover DOM editing, formatting, lists, tables, slash commands, read-only state, sanitization, import/export, and custom tools. The browser tests were authored but could not be executed in the restricted implementation environment. There is no claim of verified visual or cross-browser parity.
+Node tests cover validation, history, nesting, safety policies, IDs, and statistics. Browser tests cover DOM editing, formatting, lists, tables, slash commands, read-only state, sanitization, import/export, and custom tools. All 45 Node tests and 46 browser tests passed on 16 November 2026. The browser suite ran in connected Chrome, with additional manual checks in the actual workspace. Firefox and Safari have not been verified. See [the follow-up research](EDITOR_RESEARCH.md) for upstream issues and the related fixes.
 
 ## Remaining compatibility work
 
-- Run the browser suite in Chromium, Firefox, and Safari, then manually test native clipboard, drag/drop, selection, IME composition, mobile keyboards, and assistive technologies.
+- Extend the verified Chrome coverage to Firefox and Safari; manually test native clipboard, drag/drop, IME composition, mobile keyboards, and assistive technologies.
 - Add an adapter layer for specific third-party Editor.js plugins when needed. The plugin catalogue is not included wholesale.
 - Add more embed providers, bookmark metadata fetching, cloud uploads, or synchronized persistence only with an explicit backend design.
 - Use a mature Markdown parser if strict CommonMark interoperability is required.
