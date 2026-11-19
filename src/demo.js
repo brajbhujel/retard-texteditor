@@ -30,7 +30,7 @@ export function welcomeDocument() {
         makeBlock('header', { level: 2, text: 'More than words' }),
         makeBlock('paragraph', { text: 'Organise a plan with a table, keep a useful code snippet, or tuck the details into a toggle. Your content stays portable: export it as <b>JSON, HTML, Markdown, or plain text</b> whenever you need it.' }),
         makeBlock('table', { withHeadings: true, content: [['The idea', 'Next step', 'Status'], ['A fresh perspective', 'Write a first draft', 'In progress'], ['Something worth sharing', 'Add a little detail', 'Up next']] }),
-        makeBlock('code', { language: 'javascript', code: "import { RetardEditor } from './src/index.js';\n\nconst editor = new RetardEditor({ holder: 'editor' });\nconst document = await editor.save();" }),
+        makeBlock('code', { language: 'javascript', code: "import RetardEditor from 'retard-texteditor';\n\nconst editor = new RetardEditor({ holder: 'editor' });\nconst document = await editor.save();" }),
         makeBlock('toggle', { title: 'A few shortcuts for your flow', text: '<b>⌘ / Ctrl + B</b> for bold, <b>⌘ / Ctrl + I</b> for italic, and <b>⌘ / Ctrl + Z</b> to undo. Press <b>Tab</b> to nest a list, and <b>⌘ / Ctrl + Enter</b> to start a paragraph below any block.', open: false }),
         makeBlock('paragraph', { text: '' }),
       ]

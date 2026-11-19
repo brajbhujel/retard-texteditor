@@ -1,12 +1,40 @@
 {
   "name": "retard-texteditor",
   "version": "1.0.0",
-  "private": true,
+  "description": "An independent block editor. Install and mount — no app shell required.",
   "type": "module",
+  "main": "./src/index.js",
+  "module": "./src/index.js",
+  "browser": "./dist/retard-editor.umd.js",
+  "types": "./src/index.d.ts",
+  "unpkg": "./dist/retard-editor.umd.js",
+  "jsdelivr": "./dist/retard-editor.umd.js",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js",
+      "default": "./src/index.js"
+    },
+    "./bundle": "./dist/retard-editor.mjs",
+    "./umd": "./dist/retard-editor.umd.js",
+    "./styles.css": "./src/styles/sdk.css",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "README.md",
+    "LICENSE",
+    "docs/API.md"
+  ],
+  "sideEffects": [
+    "**/*.css"
+  ],
   "scripts": {
     "dev": "node scripts/server.mjs",
     "start": "node scripts/server.mjs",
     "build": "node scripts/build.mjs",
+    "prepublishOnly": "npm run check && npm test && npm run build",
     "preview": "node scripts/server.mjs --dist",
     "test": "node --test tests/*.test.mjs",
     "check": "node scripts/check.mjs"
@@ -14,12 +42,22 @@
   "engines": {
     "node": ">=20"
   },
-  "exports": {
-    ".": {
-      "types": "./src/index.d.ts",
-      "import": "./src/index.js"
-    },
-    "./styles.css": "./src/styles/sdk.css"
+  "keywords": [
+    "editor",
+    "block-editor",
+    "rich-text",
+    "wysiwyg",
+    "contenteditable",
+    "markdown"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brajbhujel/retard-texteditor.git"
   },
-  "types": "./src/index.d.ts"
+  "bugs": {
+    "url": "https://github.com/brajbhujel/retard-texteditor/issues"
+  },
+  "homepage": "https://github.com/brajbhujel/retard-texteditor#readme",
+  "author": "brajbhujel",
+  "license": "MIT"
 }
