@@ -31,11 +31,11 @@
     "**/*.css"
   ],
   "scripts": {
-    "dev": "node scripts/server.mjs",
-    "start": "node scripts/server.mjs",
+    "dev": "npm run build && node scripts/server.mjs --website",
+    "start": "npm run build && node scripts/server.mjs --website",
     "build": "node scripts/build.mjs",
     "prepublishOnly": "npm run check && npm test && npm run build",
-    "preview": "node scripts/server.mjs --dist",
+    "preview": "npm run build && node scripts/server.mjs --website",
     "test": "node --test tests/*.test.mjs",
     "check": "node scripts/check.mjs"
   },

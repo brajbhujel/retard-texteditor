@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Retard Editor — an independent block editor npm package. Install it, mount it, ship it.">
+  <title>retard. — block editor package</title>
+  <link rel="icon" href="./assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./assets/css/site.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="./">retard<span class="brand__dot">.</span><span class="brand__tag">editor</span></a>
+      <nav class="nav" aria-label="Primary">
+        <a href="./docs/">Docs</a>
+        <a class="nav-hide-sm" href="./docs/api.html">API</a>
+        <a href="./playground/">Playground</a>
+        <a class="button button--primary button--small" href="./playground/">Try it</a>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero__inner">
+        <div>
+          <p class="hero__brand">retard<span>.</span></p>
+          <h1>A block editor you install like any other package.</h1>
+          <p class="hero__lead">Plain JavaScript. No Editor.js dependency. Mount it in a holder, get structured JSON back.</p>
+          <div class="hero__actions">
+            <a class="button button--primary" href="./playground/">Open playground</a>
+            <a class="button button--ghost" href="./docs/">Read the docs</a>
+          </div>
+        </div>
+        <aside class="hero__panel" aria-label="Animated writing preview">
+          <div class="hero__panel-label">
+            <span>Demo reel</span>
+            <!-- <span class="status-pill">auto-typing</span> -->
+          </div>
+          <div id="hero-editor"></div>
+          <p class="hero__panel-note">Not interactive on purpose. The real thing is in the <a href="./playground/">playground</a>.</p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section section--tight">
+      <div class="section__inner install">
+        <div>
+          <p class="section__eyebrow">Install</p>
+          <h2>Three lines. That is the whole script.</h2>
+          <p class="section__copy">Styles and dialogs ship with the package. You do not need the old workspace shell.</p>
+          <a class="button button--ghost" href="./docs/">Getting started</a>
+        </div>
+        <pre><code><span class="c">npm install retard-texteditor</span>
+
+<span class="k">import</span> RetardEditor <span class="k">from</span> <span class="c">'retard-texteditor'</span>;
+
+<span class="k">const</span> editor = <span class="k">new</span> RetardEditor({ holder: <span class="c">'editor'</span> });</code></pre>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section__inner">
+        <p class="section__eyebrow">Why this exists</p>
+        <h2>Built to drop into your app, not replace it.</h2>
+        <p class="section__copy">Use it in a form, a CMS field, or a writing surface. Keep your own chrome.</p>
+        <div class="feature-grid">
+          <article class="feature">
+            <h3>Zero npm dependencies</h3>
+            <p>ES modules, TypeScript declarations, and a UMD build for CDN use.</p>
+          </article>
+          <article class="feature">
+            <h3>Editor.js-shaped data</h3>
+            <p>Familiar <code>{ blocks: [...] }</code> documents without the Editor.js runtime.</p>
+          </article>
+          <article class="feature">
+            <h3>Defaults that work</h3>
+            <p>Link, colour, media, and file dialogs are wired unless you opt out.</p>
+          </article>
+          <article class="feature">
+            <h3>18 block types</h3>
+            <p>Headings, lists, tables, code, embeds, attachments, toggles, and more.</p>
+          </article>
+          <article class="feature">
+            <h3>Export helpers</h3>
+            <p>JSON, HTML, Markdown, and plain text from the same model.</p>
+          </article>
+          <article class="feature">
+            <h3>Own your UI</h3>
+            <p>Set <code>defaults: false</code> and handle events when you need custom uploads.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <span>retard-texteditor · MIT</span>
+      <span><a href="./playground/">Playground</a> · <a href="./docs/api.html">API</a> · <a href="https://github.com/brajbhujel/retard-texteditor">GitHub</a></span>
+    </div>
+  </footer>
+
+  <script src="./assets/js/hero-preview.js"></script>
+</body>
+</html>

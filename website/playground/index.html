@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Playground for retard-texteditor — try the block editor in the browser.">
+  <title>Playground — retard.</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/site.css">
+  <link rel="stylesheet" href="../assets/vendor/retard-editor.css">
+</head>
+<body class="playground-page">
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="../">retard<span class="brand__dot">.</span><span class="brand__tag">editor</span></a>
+      <nav class="nav" aria-label="Primary">
+        <a href="../docs/">Docs</a>
+        <a href="../docs/api.html">API</a>
+        <a href="./" aria-current="page">Playground</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="shell">
+    <div class="playground-bar">
+      <div>
+        <h1>Playground</h1>
+        <p>Same package consumers install. Edits stay in this browser tab.</p>
+      </div>
+      <div class="playground-actions">
+        <span class="status-pill" id="save-status">ready</span>
+        <button type="button" class="button button--ghost button--small" id="btn-reset">Reset sample</button>
+        <button type="button" class="button button--ghost button--small" id="btn-clear">Clear</button>
+        <button type="button" class="button button--primary button--small" id="btn-copy">Copy JSON</button>
+      </div>
+    </div>
+
+    <div class="playground-layout">
+      <div class="editor-stage">
+        <div id="editor"></div>
+      </div>
+      <aside class="side-panel" aria-label="Document JSON">
+        <h2>Saved output</h2>
+        <pre id="json-out">Loading…</pre>
+      </aside>
+    </div>
+  </main>
+
+  <script src="../assets/vendor/retard-editor.umd.js"></script>
+  <script src="../assets/js/sample-doc.js"></script>
+  <script src="../assets/js/playground.js"></script>
+</body>
+</html>

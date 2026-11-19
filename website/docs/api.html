@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="API reference for retard-texteditor.">
+  <title>API — retard.</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/site.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="../">retard<span class="brand__dot">.</span><span class="brand__tag">editor</span></a>
+      <nav class="nav" aria-label="Primary">
+        <a href="./">Docs</a>
+        <a href="./api.html" aria-current="page">API</a>
+        <a href="../playground/">Playground</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="shell docs-layout">
+    <aside class="docs-nav" aria-label="Docs">
+      <h2>Guide</h2>
+      <a href="./">Getting started</a>
+      <a href="./api.html" aria-current="page">API reference</a>
+      <a href="./architecture.html">Architecture</a>
+      <a href="../playground/">Playground</a>
+    </aside>
+
+    <article class="docs-content">
+      <h1>API reference</h1>
+      <p>Import <code>RetardEditor</code> from <code>retard-texteditor</code>. Styles inject automatically. Optional: <code>import 'retard-texteditor/styles.css'</code>.</p>
+
+      <h2>Create</h2>
+      <pre><code>const editor = new RetardEditor({
+  holder: document.querySelector('#editor'),
+  data: { blocks: [] },
+  defaults: true,
+  onChange(instance, data) {}
+});
+
+await editor.isReady;
+const documentData = await editor.save();</code></pre>
+
+      <h2>Methods</h2>
+      <table>
+        <thead><tr><th>Method</th><th>Effect</th></tr></thead>
+        <tbody>
+          <tr><td><code>save()</code></td><td>Promise resolving to a sanitized document</td></tr>
+          <tr><td><code>getData()</code></td><td>Synchronous document snapshot</td></tr>
+          <tr><td><code>load(data)</code></td><td>Replace the document; reset undo history</td></tr>
+          <tr><td><code>clear()</code></td><td>Reset to one blank paragraph</td></tr>
+          <tr><td><code>insert(type, data, index)</code></td><td>Insert a block</td></tr>
+          <tr><td><code>update(id, data)</code></td><td>Merge block data</td></tr>
+          <tr><td><code>delete(id)</code></td><td>Delete a block</td></tr>
+          <tr><td><code>move(id, index)</code></td><td>Reorder a block</td></tr>
+          <tr><td><code>duplicate(id)</code></td><td>Copy a block</td></tr>
+          <tr><td><code>convert(id, type, data)</code></td><td>Convert block type</td></tr>
+          <tr><td><code>focus(id, field, side)</code></td><td>Focus a field</td></tr>
+          <tr><td><code>setReadOnly(boolean)</code></td><td>Toggle editability</td></tr>
+          <tr><td><code>format(action, value, label)</code></td><td>Inline formatting</td></tr>
+          <tr><td><code>undo()</code> / <code>redo()</code></td><td>History</td></tr>
+          <tr><td><code>registerTool(name, tool)</code></td><td>Custom block renderer</td></tr>
+          <tr><td><code>destroy()</code></td><td>Tear down DOM and listeners</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Events</h2>
+      <p>With <code>defaults: true</code>, the package handles these. Set <code>defaults: false</code> to wire your own.</p>
+      <table>
+        <thead><tr><th>Event</th><th>Detail</th></tr></thead>
+        <tbody>
+          <tr><td><code>configure</code></td><td><code>{ block }</code> for media blocks</td></tr>
+          <tr><td><code>files</code></td><td><code>{ files, index }</code> from paste/drop</td></tr>
+          <tr><td><code>link</code></td><td><code>{ url, text }</code></td></tr>
+          <tr><td><code>color</code></td><td><code>{ kind }</code> — <code>color</code> or <code>background</code></td></tr>
+          <tr><td><code>footnote</code> / <code>footnotes</code></td><td>Add or edit notes</td></tr>
+          <tr><td><code>notice</code></td><td>Status message string</td></tr>
+          <tr><td><code>change</code></td><td>Current document data</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Custom tool</h2>
+      <pre><code>import RetardEditor, { sanitizeHTML } from 'retard-texteditor';
+
+const editor = new RetardEditor({
+  holder: 'editor',
+  tools: {
+    note: {
+      title: 'Note',
+      icon: 'file',
+      render(data, readOnly) {
+        return `&lt;div data-note contenteditable="${!readOnly}"&gt;${sanitizeHTML(data.text || '')}&lt;/div&gt;`;
+      },
+      save(element) {
+        return { text: sanitizeHTML(element.querySelector('[data-note]').innerHTML) };
+      }
+    }
+  }
+});</code></pre>
+
+      <h2>React / Next.js</h2>
+      <p>Create the editor in a client effect after the holder exists. Dynamically import the package, keep the instance in a ref, and call <code>destroy()</code> on cleanup. Never construct it during SSR. Avoid <code>load()</code> on every keystroke — use <code>onChange</code> for form state.</p>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <span>retard-texteditor · MIT</span>
+      <a href="https://github.com/brajbhujel/retard-texteditor">GitHub</a>
+    </div>
+  </footer>
+</body>
+</html>
