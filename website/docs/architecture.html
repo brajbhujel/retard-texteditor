@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Architecture notes for retard-texteditor.">
+  <title>Architecture — retard.</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/site.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="../">retard<span class="brand__dot">.</span><span class="brand__tag">editor</span></a>
+      <nav class="nav" aria-label="Primary">
+        <a href="./">Docs</a>
+        <a href="./api.html">API</a>
+        <a href="../playground/">Playground</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="shell docs-layout">
+    <aside class="docs-nav" aria-label="Docs">
+      <h2>Guide</h2>
+      <a href="./">Getting started</a>
+      <a href="./api.html">API reference</a>
+      <a href="./architecture.html" aria-current="page">Architecture</a>
+      <a href="../playground/">Playground</a>
+    </aside>
+
+    <article class="docs-content">
+      <h1>Architecture</h1>
+      <p>Independent block editor inspired by Editor.js product behaviour — not a fork of its code.</p>
+
+      <h2>Folder map</h2>
+      <pre><code>src/                 npm package (the editor)
+website/             landing, playground, docs (static HTML/CSS/JS)
+docs/                long-form research notes for contributors
+tests/               node + browser tests
+scripts/             build, check, local server
+dist/                library bundles + vendor copies for the site</code></pre>
+
+      <h2>Core pieces</h2>
+      <ul>
+        <li><code>src/core/model.js</code> — validation, IDs, lists, history, stats</li>
+        <li><code>src/core/editor.js</code> — interactive lifecycle and toolbars</li>
+        <li><code>src/core/selection.js</code> — caret bookmarks and range helpers</li>
+        <li><code>src/tools/registry.js</code> — built-in block renderers</li>
+        <li><code>src/ui/sdk-defaults.js</code> — default dialogs after install</li>
+      </ul>
+
+      <h2>Editing model</h2>
+      <p>Each block owns one or more <code>contenteditable</code> fields. Typing syncs into the model without replacing the active DOM. Structural edits reconcile rows by block id so unchanged blocks keep their DOM identity.</p>
+
+      <h2>Data format</h2>
+      <p>Documents use <code>{ time, version, blocks: [{ id, type, data, tunes }] }</code>. Custom tools use this project’s <code>render</code> / <code>save</code> contract — not Editor.js’s plugin class API.</p>
+
+      <div class="callout">
+        <p>Contributor research lives in the repo at <code>docs/ARCHITECTURE.md</code> and <code>docs/EDITOR_RESEARCH.md</code>.</p>
+      </div>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <span>retard-texteditor · MIT</span>
+      <a href="https://github.com/brajbhujel/retard-texteditor">GitHub</a>
+    </div>
+  </footer>
+</body>
+</html>

@@ -1,5 +1,7 @@
 node_modules/
 dist/
+website/assets/vendor/*
+!website/assets/vendor/.gitkeep
 .DS_Store
 ._*
 *.log

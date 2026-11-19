@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Getting started with retard-texteditor.">
+  <title>Docs — retard.</title>
+  <link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../assets/css/site.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header__inner">
+      <a class="brand" href="../">retard<span class="brand__dot">.</span><span class="brand__tag">editor</span></a>
+      <nav class="nav" aria-label="Primary">
+        <a href="./" aria-current="page">Docs</a>
+        <a href="./api.html">API</a>
+        <a href="../playground/">Playground</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="shell docs-layout">
+    <aside class="docs-nav" aria-label="Docs">
+      <h2>Guide</h2>
+      <a href="./" aria-current="page">Getting started</a>
+      <a href="./api.html">API reference</a>
+      <a href="./architecture.html">Architecture</a>
+      <a href="../playground/">Playground</a>
+    </aside>
+
+    <article class="docs-content">
+      <h1>Getting started</h1>
+      <p>Install the package, give it a holder element, and you have a working block editor — styles and dialogs included.</p>
+
+      <div class="callout">
+        <p>This site is the public face of the package. The library itself lives in <code>src/</code> and publishes as <code>retard-texteditor</code>.</p>
+      </div>
+
+      <h2>Install</h2>
+      <pre><code>npm install retard-texteditor</code></pre>
+
+      <h2>Mount</h2>
+      <pre><code>&lt;div id="editor"&gt;&lt;/div&gt;
+&lt;script type="module"&gt;
+  import RetardEditor from 'retard-texteditor';
+
+  const editor = new RetardEditor({
+    holder: 'editor',
+    placeholder: 'Start writing…',
+    onChange: async (instance) =&gt; {
+      console.log(await instance.save());
+    }
+  });
+
+  await editor.isReady;
+&lt;/script&gt;</code></pre>
+
+      <h2>CDN</h2>
+      <pre><code>&lt;div id="editor"&gt;&lt;/div&gt;
+&lt;script src="https://unpkg.com/retard-texteditor/dist/retard-editor.umd.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  new RetardEditor({ holder: 'editor' });
+&lt;/script&gt;</code></pre>
+
+      <h2>Useful options</h2>
+      <table>
+        <thead>
+          <tr><th>Option</th><th>Default</th><th>Meaning</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>holder</code></td><td>required</td><td>Element or element id</td></tr>
+          <tr><td><code>data</code></td><td><code>{ blocks: [] }</code></td><td>Initial document</td></tr>
+          <tr><td><code>defaults</code></td><td><code>true</code></td><td>Built-in dialogs for links, colour, media, files</td></tr>
+          <tr><td><code>readOnly</code></td><td><code>false</code></td><td>View-only mode</td></tr>
+          <tr><td><code>autofocus</code></td><td><code>false</code></td><td>Focus the first block</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Next</h2>
+      <p>See the <a href="./api.html">API reference</a> for methods and events, or open the <a href="../playground/">playground</a> and break things.</p>
+    </article>
+  </main>
+
+  <footer class="site-footer">
+    <div class="site-footer__inner">
+      <span>retard-texteditor · MIT</span>
+      <a href="https://github.com/brajbhujel/retard-texteditor">GitHub</a>
+    </div>
+  </footer>
+</body>
+</html>

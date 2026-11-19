@@ -50,26 +50,7 @@ async function bundle(file, { sync = false } = {}) {
 
 await rm('dist', { recursive: true, force: true });
 await mkdir('dist', { recursive: true });
-for (const item of ['src', 'public', 'docs']) {
-  try { await cp(item, `dist/${item}`, { recursive: true, filter: path => !path.split('/').at(-1).startsWith('._') }); } catch (error) { if (error.code !== 'ENOENT') throw error; }
-}
-
-await bundle('src/app.js');
-const javascript = `const __modules = {};\n${[...modules.values()].join('\n')}`;
-let css = await flattenCss('src/styles/app.css');
-const favicon = await readFile('public/favicon.svg', 'utf8');
-const faviconURL = `data:image/svg+xml,${encodeURIComponent(favicon)}`;
-let html = await readFile('index.html', 'utf8');
-html = html.replace('<link rel="stylesheet" href="/src/styles/app.css">', `<style>${css}</style>`).replace('/public/favicon.svg', faviconURL).replace('<script type="module" src="/src/app.js"></script>', `<script type="module">${javascript.replaceAll('/public/favicon.svg', faviconURL).replaceAll('</script', '<\\/script')}</script>`);
-await writeFile('dist/index.html', html);
-await writeFile('dist/app.bundle.js', javascript);
-const appModuleCount = modules.size;
-
-modules.clear();
-await bundle('tests/browser-tests.js');
-let testHTML = await readFile('tests/browser.html', 'utf8');
-testHTML = testHTML.replace('<link rel="stylesheet" href="../src/styles/app.css">', `<style>${css}</style>`).replace('<script type="module" src="./browser-tests.js"></script>', `<script type="module">const __modules = {};\n${[...modules.values()].join('\n').replaceAll('</script', '<\\/script')}</script>`);
-await writeFile('dist/browser-tests.html', testHTML);
+await mkdir('website/assets/vendor', { recursive: true });
 
 const sdkCss = await flattenCss('src/styles/sdk.css');
 await writeFile('dist/retard-editor.css', sdkCss);
@@ -99,4 +80,18 @@ ${libraryBody}return {
 `;
 await writeFile('dist/retard-editor.umd.js', umd);
 
-console.log(`Built ${appModuleCount} app modules, library ESM/UMD, and standalone browser tests. Open dist/index.html, or publish when ready.`);
+await writeFile('website/assets/vendor/retard-editor.css', sdkCss);
+await writeFile('website/assets/vendor/retard-editor.umd.js', umd);
+await writeFile('website/assets/vendor/retard-editor.mjs', esm);
+
+modules.clear();
+await mkdir('dist', { recursive: true });
+await bundle('tests/browser-tests.js');
+let testHTML = await readFile('tests/browser.html', 'utf8');
+const testCss = `${sdkCss}\nbody{padding:30px}h1{font-size:24px}#report{font:13px/1.8 monospace;white-space:pre-wrap}#report[data-result=passed]{color:#267a59}#report[data-result=failed]{color:#b34343}#fixture{margin-top:24px;max-width:720px;border:1px solid #ddd;padding:16px;border-radius:8px}`;
+testHTML = testHTML
+  .replace(/<link rel="stylesheet" href="[^"]*">/, `<style>${testCss}</style>`)
+  .replace('<script type="module" src="./browser-tests.js"></script>', `<script type="module">const __modules = {};\n${[...modules.values()].join('\n').replaceAll('</script', '<\\/script')}</script>`);
+await writeFile('dist/browser-tests.html', testHTML);
+
+console.log('Built library ESM/UMD, website vendor copies, and browser tests.');

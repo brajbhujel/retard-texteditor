@@ -1,46 +1,23 @@
 <!doctype html>
 <html lang="en">
-
 <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width,initial-scale=1">
-    <title>Retard browser regression tests</title>
-    <link rel="stylesheet" href="../src/styles/app.css">
-    <style>
-        body {
-            padding: 30px
-        }
-
-        h1 {
-            font-size: 24px
-        }
-
-        #report {
-            font: 13px/1.8 monospace;
-            white-space: pre-wrap
-        }
-
-        #report[data-result=passed] {
-            color: #267a59
-        }
-
-        #report[data-result=failed] {
-            color: #b34343
-        }
-
-        #fixture {
-            max-width: 720px;
-            margin: 40px auto
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Retard browser regression tests</title>
+  <link rel="stylesheet" href="../src/styles/sdk.css">
+  <style>
+    body { padding: 30px; font-family: system-ui, sans-serif; }
+    h1 { font-size: 24px; }
+    #report { font: 13px/1.8 monospace; white-space: pre-wrap; }
+    #report[data-result=passed] { color: #267a59; }
+    #report[data-result=failed] { color: #b34343; }
+    #fixture { margin-top: 24px; max-width: 720px; border: 1px solid #ddd; padding: 16px; border-radius: 8px; }
+  </style>
 </head>
-
 <body>
-    <h1>Browser regression tests</h1>
-    <p>Runs against a disposable editor fixture. Does not touch saved documents.</p>
-    <pre id="report">Running…</pre>
-    <div id="fixture"></div>
-    <script type="module" src="./browser-tests.js"></script>
+  <h1>Browser regression tests</h1>
+  <pre id="report">Running…</pre>
+  <div id="fixture"></div>
+  <script type="module" src="./browser-tests.js"></script>
 </body>
-
 </html>

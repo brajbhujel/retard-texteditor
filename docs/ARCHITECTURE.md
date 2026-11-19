@@ -4,7 +4,7 @@
 
 The reference was the Editor.js product, documentation, and public plugin catalogue, reviewed on 15 November 2026. This project contains independently written source rather than a copy of Editor.js's code or website.
 
-Editor.js's defining design is a document composed of independent editable blocks. Its output is structured data. Its toolbox, inline tools, and block tunes are separate extension points. The surrounding workspace in this repository is an original local document application.
+Editor.js's defining design is a document composed of independent editable blocks. Its output is structured data. Its toolbox, inline tools, and block tunes are separate extension points. The public landing page, playground, and docs site live in `website/` as static HTML/CSS/JS.
 
 References:
 
@@ -21,7 +21,7 @@ References:
 
 `src/core/model.js` owns the serializable block data, validation, list conversion, URL validation, statistics, and bounded history. Imported objects are copied, checked, and normalized. IDs are unique. A document always retains at least one block. Invalid or unsupported blocks cause an explicit import error rather than silently losing content.
 
-`src/core/editor.js` owns the interactive lifecycle. Each block has one or more `contenteditable` fields. Input events synchronize the edited block into the model without replacing the active DOM, so ordinary typing does not continually reset the caret. Structural changes synchronize pending input, mutate the block array, and reconcile rows by block ID and a data signature. Unchanged rows keep their DOM identity; only changed rows are replaced, after which the caret is restored. Reapplying the current read-only state is a no-op. Workspace view routing is restricted to actual tab buttons, so editor clicks cannot trigger a document render.
+`src/core/editor.js` owns the interactive lifecycle. Each block has one or more `contenteditable` fields. Input events synchronize the edited block into the model without replacing the active DOM, so ordinary typing does not continually reset the caret. Structural changes synchronize pending input, mutate the block array, and reconcile rows by block ID and a data signature. Unchanged rows keep their DOM identity; only changed rows are replaced, after which the caret is restored. Reapplying the current read-only state is a no-op.
 
 `src/core/selection.js` wraps DOM Selection and Range operations. It records a block ID, field path, and character offset for history restoration. Paragraph splitting uses cloned ranges so inline markup can survive a split. Cross-block replacement retains the unselected prefix and suffix in a paragraph.
 

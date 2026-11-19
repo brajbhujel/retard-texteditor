@@ -38,6 +38,7 @@ export class RetardEditor extends EventTarget {
     this.formatbar.setAttribute('role', 'toolbar');
     this.formatbar.setAttribute('aria-label', 'Document formatting');
     this.formatbar.dataset.preserveSelection = 'true';
+    this.formatbar.hidden = true;
     this.formatbar.innerHTML = this.toolbarMarkup(false);
     this.holder.before(this.formatbar);
     document.body.append(this.inline);
@@ -136,7 +137,7 @@ export class RetardEditor extends EventTarget {
       end.setAttribute('aria-label', 'Add a paragraph'); end.innerHTML = 'Click to keep writing, or press <kbd>/</kbd> for a block'; this.holder.append(end);
     }
     if (this.placeholder) this.holder.querySelector('.paragraph')?.setAttribute('data-placeholder', this.placeholder);
-    if (this.formatbar) { this.formatbar.hidden = this.readOnly; this.updateFormatbar(); }
+    if (this.formatbar) { this.formatbar.hidden = true; this.updateFormatbar(); }
   }
   syncRow(row) {
     if (!row) return;

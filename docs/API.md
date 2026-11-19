@@ -8,7 +8,7 @@ npm install retard-texteditor
 import RetardEditor from 'retard-texteditor';
 ```
 
-Styles and default dialogs are applied automatically. Optional: `import 'retard-texteditor/styles.css'`. TypeScript declarations ship with the package. The local workspace demo still uses `src/styles/app.css` for its sidebar shell.
+Styles and default dialogs are applied automatically. Optional: `import 'retard-texteditor/styles.css'`. TypeScript declarations ship with the package. The public landing/playground site lives in `website/`.
 
 ## Create an editor
 
@@ -79,7 +79,7 @@ editor.addEventListener('notice', event => {
 | `notice` | A human-readable status message |
 | `change` | Current `{ time, version, blocks }` |
 
-With `defaults: true` (the package default), the SDK wires these events for you. The workspace demo uses `defaults: false` and wires them in `src/app.js` so it can keep document-scoped uploads. `formatOnClose` in `src/ui/dialog.js` restores the saved range after the dialog returns focus, then applies the change. The persistent toolbar is inserted immediately before the holder and removed by `destroy()`.
+With `defaults: true` (the package default), the SDK wires these events for you. Set `defaults: false` to handle uploads and dialogs yourself. `formatOnClose` in `src/ui/dialog.js` restores the saved range after the dialog returns focus, then applies the change. The persistent toolbar is inserted immediately before the holder and removed by `destroy()`.
 
 ## Custom block
 
