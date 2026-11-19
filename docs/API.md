@@ -1,6 +1,14 @@
 # Editor API
 
-Import `RetardEditor` from `src/index.js` and include `src/styles/sdk.css`. The workspace uses `src/styles/app.css`, which also styles its sidebar and dialogs. TypeScript declarations are provided by `src/index.d.ts`.
+```sh
+npm install retard-texteditor
+```
+
+```js
+import RetardEditor from 'retard-texteditor';
+```
+
+Styles and default dialogs are applied automatically. Optional: `import 'retard-texteditor/styles.css'`. TypeScript declarations ship with the package. The local workspace demo still uses `src/styles/app.css` for its sidebar shell.
 
 ## Create an editor
 
@@ -11,6 +19,8 @@ const editor = new RetardEditor({
   readOnly: false,
   direction: 'ltr',
   placeholder: 'Start writing…',
+  defaults: true,
+  autofocus: false,
   onReady(instance) {},
   onChange(instance, data) {}
 });
@@ -69,12 +79,12 @@ editor.addEventListener('notice', event => {
 | `notice` | A human-readable status message |
 | `change` | Current `{ time, version, blocks }` |
 
-The workspace wires these events in `src/app.js`; `src/ui/formatting-dialogs.js` supplies the link and colour dialogs. `formatOnClose` in `src/ui/dialog.js` restores the saved range after the dialog returns focus, then applies the change. Applying native commands while a modal still has focus can lose the selected text. The persistent toolbar is inserted immediately before the holder and removed by `destroy()`. External media/file operations should capture their originating document before awaiting network or file operations.
+With `defaults: true` (the package default), the SDK wires these events for you. The workspace demo uses `defaults: false` and wires them in `src/app.js` so it can keep document-scoped uploads. `formatOnClose` in `src/ui/dialog.js` restores the saved range after the dialog returns focus, then applies the change. The persistent toolbar is inserted immediately before the holder and removed by `destroy()`.
 
 ## Custom block
 
 ```js
-import { RetardEditor, sanitizeHTML } from './src/index.js';
+import RetardEditor, { sanitizeHTML } from 'retard-texteditor';
 
 const editor = new RetardEditor({
   holder: 'editor',
@@ -102,6 +112,6 @@ JSON import preserves registered custom tool data. HTML and Markdown exporters c
 
 ## React / Next.js
 
-Create the editor in a client component's effect after the holder exists. Dynamically import `src/index.js` in the effect, retain the instance in a ref, and call `destroy()` in effect cleanup. Never instantiate it during server rendering. When async initialization completes after unmount, destroy the created instance immediately.
+Create the editor in a client component's effect after the holder exists. Dynamically import `retard-texteditor` in the effect, retain the instance in a ref, and call `destroy()` in effect cleanup. Never instantiate it during server rendering. When async initialization completes after unmount, destroy the created instance immediately.
 
 Use `onChange` to pass data to your form state. Avoid calling `load` on every keystroke: it replaces the DOM and resets history. Call it when switching to a genuinely different document.

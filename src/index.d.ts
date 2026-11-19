@@ -38,6 +38,9 @@ export interface EditorOptions {
   readOnly?: boolean;
   direction?: 'ltr' | 'rtl';
   placeholder?: string;
+  /** Built-in link/colour/media/file dialogs. Default true. Set false to wire your own. */
+  defaults?: boolean;
+  autofocus?: boolean;
   onChange?(editor: RetardEditor, data: OutputData): void;
   onReady?(editor: RetardEditor): void;
 }
@@ -88,4 +91,6 @@ export function fromHTML(html: string): Block[];
 export const VERSION: string;
 export const builtins: Record<string, Tool>;
 export function toolChoices(registry: ToolRegistry): Array<Tool & { type: string; data: Record<string, unknown>; shortcut: string }>;
+export function ensureStyles(cssText?: string): void;
+export function attachDefaults(editor: RetardEditor): RetardEditor;
 export default RetardEditor;

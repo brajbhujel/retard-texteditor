@@ -4,10 +4,13 @@ import { selectionRange, restoreRange, setCaret, caretAt, splitAtCaret, bookmark
 import { ToolRegistry, toolChoices } from '../tools/registry.js';
 import { fromHTML, fromMarkdown, toHTML, toMarkdown } from './serialization.js';
 import { icon } from '../ui/icons.js';
+import { ensureStyles } from '../styles/inject.js';
+import { attachDefaults } from '../ui/sdk-defaults.js';
 
 export class RetardEditor extends EventTarget {
-  constructor({ holder, data = { blocks: [] }, tools = {}, readOnly = false, onChange, onReady, placeholder, direction = 'ltr' } = {}) {
+  constructor({ holder, data = { blocks: [] }, tools = {}, readOnly = false, onChange, onReady, placeholder, direction = 'ltr', defaults = true, autofocus = false } = {}) {
     super();
+    ensureStyles();
     this.holder = typeof holder === 'string' ? document.getElementById(holder) : holder;
     if (!this.holder) throw new Error('An editor holder is required.');
     this.registry = new ToolRegistry(tools);
@@ -40,6 +43,8 @@ export class RetardEditor extends EventTarget {
     document.body.append(this.inline);
     this.render();
     this.bind();
+    if (defaults) attachDefaults(this);
+    if (autofocus && this.blocks[0]) this.focus(this.blocks[0].id, undefined, 'end');
     this.isReady = Promise.resolve(this);
     queueMicrotask(() => onReady?.(this));
   }

@@ -111,7 +111,7 @@ async function openDocument(doc) {
   el('document-date').textContent = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' }).format(new Date(doc.createdAt));
   el('document-type').textContent = doc.cover ? 'YOUR WORKSPACE GUIDE' : 'PERSONAL DOCUMENT';
   el('cover').hidden = !doc.cover;
-  editor = new RetardEditor({ holder: 'editor', data: doc.data, direction: doc.direction || 'ltr', onChange: (_, data) => scheduleSave(data) });
+  editor = new RetardEditor({ holder: 'editor', data: doc.data, direction: doc.direction || 'ltr', defaults: false, onChange: (_, data) => scheduleSave(data) });
   editor.addEventListener('notice', event => toast(event.detail));
   editor.addEventListener('configure', event => configureMedia(event.detail.block));
   editor.addEventListener('files', event => insertFiles(event.detail));
