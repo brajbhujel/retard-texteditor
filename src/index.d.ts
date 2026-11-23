@@ -18,7 +18,7 @@ export interface EditorOptions {
   readOnly?: boolean | { hideControls?: boolean };
   placeholder?: string | false;
   autofocus?: boolean;
-  /** Extra `--blok-*` token overrides merged onto the Retard emerald theme. */
+  theme?: 'light' | 'dark' | 'auto';
   tokens?: Record<string, string>;
   onChange?(editor: RetardEditor, data: OutputData): void;
   onReady?(editor: RetardEditor): void;

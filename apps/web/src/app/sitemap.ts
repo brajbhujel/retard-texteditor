@@ -1,11 +1,26 @@
 import type { MetadataRoute } from 'next';
 
+const base = 'https://retard-texteditor.bishawaraj.com.np';
+
 export default function sitemap(): MetadataRoute.Sitemap {
-  const base = 'https://retard-texteditor.bishawaraj.com.np';
-  return [
-    { url: base, changeFrequency: 'weekly', priority: 1 },
-    { url: `${base}/playground`, changeFrequency: 'weekly', priority: 0.9 },
-    { url: `${base}/docs`, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${base}/docs/api`, changeFrequency: 'monthly', priority: 0.7 }
+  const paths = [
+    '',
+    '/docs',
+    '/docs/install',
+    '/docs/quickstart',
+    '/docs/vanilla',
+    '/docs/react',
+    '/docs/vue',
+    '/docs/cdn',
+    '/docs/typescript',
+    '/docs/api',
+    '/docs/data',
+    '/playground'
   ];
+  return paths.map((path) => ({
+    url: `${base}${path}`,
+    lastModified: new Date(),
+    changeFrequency: path === '/playground' ? 'weekly' : 'monthly',
+    priority: path === '' ? 1 : 0.7
+  }));
 }

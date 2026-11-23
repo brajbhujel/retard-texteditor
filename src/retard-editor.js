@@ -63,6 +63,7 @@ export class RetardEditor extends EventTarget {
       autofocus: options.autofocus ?? false,
       placeholder: options.placeholder ?? 'Type / for blocks…',
       readOnly: options.readOnly ?? false,
+      theme: options.theme ?? 'light',
       style: {
         fontFamilySans: RETARD_THEME_TOKENS['--blok-font-sans'],
         tokens

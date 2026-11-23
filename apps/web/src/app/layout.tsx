@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import '@/styles/site.css';
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://retard-texteditor.vercel.app'),
+  metadataBase: new URL('https://retard-texteditor.bishawaraj.com.np'),
   title: {
     default: 'retard. — block editor package',
     template: '%s — retard.'
@@ -28,8 +28,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" suppressHydrationWarning>
+      <body suppressHydrationWarning>{children}</body>
     </html>
   );
 }

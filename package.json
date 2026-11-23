@@ -1,7 +1,7 @@
 {
   "name": "retard-texteditor",
-  "version": "1.0.0",
-  "description": "Notion-like block editor — Retard API over the Blok engine. Install and mount.",
+  "version": "1.0.1",
+  "description": "Block editor npm package. Install, mount a holder, save structured JSON.",
   "type": "module",
   "main": "./src/index.js",
   "module": "./src/index.js",

@@ -13,6 +13,7 @@ declare module 'retard-texteditor' {
     readOnly?: boolean | { hideControls?: boolean };
     placeholder?: string | false;
     autofocus?: boolean;
+    theme?: 'light' | 'dark' | 'auto';
     tokens?: Record<string, string>;
     onChange?(editor: RetardEditor, data: OutputData): void;
     onReady?(editor: RetardEditor): void;

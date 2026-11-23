@@ -13,10 +13,10 @@ export function SiteHeader({ current }: Props) {
           <span className="brand__tag">editor</span>
         </Link>
         <nav className="nav" aria-label="Primary">
-          <Link href="/docs" aria-current={current === 'docs' ? 'page' : undefined}>
+          <Link href="/docs" aria-current={current === 'docs' || current === 'api' ? 'page' : undefined}>
             Docs
           </Link>
-          <Link className="nav-hide-sm" href="/docs/api" aria-current={current === 'api' ? 'page' : undefined}>
+          <Link className="nav-hide-sm" href="/docs/api">
             API
           </Link>
           <Link href="/playground" aria-current={current === 'playground' ? 'page' : undefined}>

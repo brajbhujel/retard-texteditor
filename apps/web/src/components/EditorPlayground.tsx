@@ -1,61 +1,80 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import RetardEditor from 'retard-texteditor';
-import { SAMPLE_DOC } from '../lib/sample-doc';
+import { SAMPLE_DOC } from '@/lib/sample-doc';
 
 type EditorInstance = {
   destroy(): void;
   getData(): unknown;
   clear(): Promise<void>;
+  load(data: unknown): Promise<void>;
   isReady: Promise<unknown>;
 };
+
+const STORAGE_KEY = 'retard-playground-doc';
 
 export function EditorPlayground() {
   const holderRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<EditorInstance | null>(null);
-  const [json, setJson] = useState('Loading…');
-  const [status, setStatus] = useState('ready');
+  const [json, setJson] = useState('Mounting…');
+  const [status, setStatus] = useState('booting');
+  const [panelOpen, setPanelOpen] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
-    const storageKey = 'retard-playground-doc';
     const holder = holderRef.current;
     if (!holder) return;
 
-    let data: unknown = SAMPLE_DOC;
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (raw) data = JSON.parse(raw);
-    } catch {
-      /* ignore */
-    }
+    (async () => {
+      try {
+        const mod = await import('retard-texteditor');
+        if (cancelled || !holderRef.current) return;
 
-    const editor = new RetardEditor({
-      holder,
-      data: data as never,
-      autofocus: true,
-      placeholder: 'Type / for blocks…',
-      onChange: (_instance: unknown, next: unknown) => {
-        const text = JSON.stringify(next, null, 2);
-        setJson(text);
+        let data: unknown = SAMPLE_DOC;
         try {
-          localStorage.setItem(storageKey, JSON.stringify(next));
-          setStatus('saved locally');
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) data = JSON.parse(raw);
         } catch {
-          setStatus('unsaved · storage blocked');
+          /* keep sample */
+        }
+
+        const RetardEditor = mod.default;
+        const editor = new RetardEditor({
+          holder: holderRef.current,
+          data: data as never,
+          autofocus: true,
+          theme: 'light',
+          placeholder: 'Type / for blocks…',
+          onChange: (_instance: unknown, next: unknown) => {
+            const text = JSON.stringify(next, null, 2);
+            setJson(text);
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+              setStatus('saved');
+            } catch {
+              setStatus('blocked');
+            }
+          }
+        }) as unknown as EditorInstance;
+
+        editorRef.current = editor;
+        await editor.isReady;
+        if (cancelled) {
+          editor.destroy();
+          return;
+        }
+        setJson(JSON.stringify(editor.getData(), null, 2));
+        setStatus('ready');
+        setError(null);
+      } catch (err) {
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : 'Failed to mount editor');
+          setStatus('error');
+          setJson('Editor failed to start');
         }
       }
-    }) as unknown as EditorInstance;
-
-    editorRef.current = editor;
-    editor.isReady
-      .then(() => {
-        if (!cancelled) setJson(JSON.stringify(editor.getData(), null, 2));
-      })
-      .catch(() => {
-        if (!cancelled) setJson('Editor failed to start');
-      });
+    })();
 
     return () => {
       cancelled = true;
@@ -65,25 +84,30 @@ export function EditorPlayground() {
   }, []);
 
   return (
-    <>
-      <div className="playground-bar">
-        <div>
+    <div className="pg">
+      <header className="pg__bar">
+        <div className="pg__titles">
           <h1>Playground</h1>
-          <p>Same package consumers install. Edits stay in this browser tab.</p>
+          <p>Live package mount. Edits stay in this tab.</p>
         </div>
-        <div className="playground-actions">
-          <span className="status-pill" id="save-status">
-            {status}
-          </span>
+        <div className="pg__actions">
+          <span className={`pg__status pg__status--${status}`}>{status}</span>
           <button
             type="button"
             className="button button--ghost button--small"
-            onClick={() => {
-              localStorage.removeItem('retard-playground-doc');
-              location.reload();
+            onClick={async () => {
+              localStorage.removeItem(STORAGE_KEY);
+              const ed = editorRef.current;
+              if (!ed) {
+                location.reload();
+                return;
+              }
+              await ed.load(SAMPLE_DOC);
+              setJson(JSON.stringify(ed.getData(), null, 2));
+              setStatus('reset');
             }}
           >
-            Reset sample
+            Reset
           </button>
           <button
             type="button"
@@ -97,11 +121,18 @@ export function EditorPlayground() {
           </button>
           <button
             type="button"
+            className="button button--ghost button--small"
+            onClick={() => setPanelOpen((v) => !v)}
+          >
+            {panelOpen ? 'Hide JSON' : 'Show JSON'}
+          </button>
+          <button
+            type="button"
             className="button button--primary button--small"
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(json);
-                setStatus('json copied');
+                setStatus('copied');
               } catch {
                 setStatus('copy failed');
               }
@@ -110,16 +141,23 @@ export function EditorPlayground() {
             Copy JSON
           </button>
         </div>
-      </div>
-      <div className="playground-layout">
-        <div className="editor-stage">
-          <div id="editor" ref={holderRef} />
+      </header>
+
+      {error ? <p className="pg__error">{error}</p> : null}
+
+      <div className={`pg__stage ${panelOpen ? 'pg__stage--split' : ''}`}>
+        <div className="pg__canvas">
+          <div className="pg__page">
+            <div id="editor" className="pg__holder" ref={holderRef} />
+          </div>
         </div>
-        <aside className="side-panel" aria-label="Document JSON">
-          <h2>Saved output</h2>
-          <pre>{json}</pre>
-        </aside>
+        {panelOpen ? (
+          <aside className="pg__json" aria-label="Document JSON">
+            <div className="pg__json-head">Output</div>
+            <pre>{json}</pre>
+          </aside>
+        ) : null}
       </div>
-    </>
+    </div>
   );
 }

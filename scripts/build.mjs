@@ -64,6 +64,7 @@ const umd = `(function (root) {
       autofocus: !!options.autofocus,
       placeholder: options.placeholder != null ? options.placeholder : 'Type / for blocks…',
       readOnly: options.readOnly || false,
+      theme: options.theme || 'light',
       style: {
         fontFamilySans: TOKENS['--blok-font-sans'],
         tokens: Object.assign({}, TOKENS, options.tokens || {})
