@@ -1,7 +1,7 @@
 {
   "name": "retard-texteditor",
   "version": "1.0.0",
-  "description": "An independent block editor. Install and mount — no app shell required.",
+  "description": "Notion-like block editor — Retard API over the Blok engine. Install and mount.",
   "type": "module",
   "main": "./src/index.js",
   "module": "./src/index.js",
@@ -25,17 +25,20 @@
     "src",
     "README.md",
     "LICENSE",
+    "NOTICE",
     "docs/API.md"
   ],
   "sideEffects": [
     "**/*.css"
   ],
   "scripts": {
-    "dev": "npm run build && node scripts/server.mjs --website",
-    "start": "npm run build && node scripts/server.mjs --website",
+    "dev": "npm run build && npm run dev --prefix apps/web",
+    "dev:static": "npm run build && node scripts/server.mjs --website",
+    "start": "npm run start --prefix apps/web",
     "build": "node scripts/build.mjs",
+    "build:web": "npm run build && npm run build --prefix apps/web",
     "prepublishOnly": "npm run check && npm test && npm run build",
-    "preview": "npm run build && node scripts/server.mjs --website",
+    "preview": "npm run build:web && npm run start --prefix apps/web",
     "test": "node --test tests/*.test.mjs",
     "check": "node scripts/check.mjs"
   },
@@ -59,5 +62,8 @@
   },
   "homepage": "https://github.com/brajbhujel/retard-texteditor#readme",
   "author": "brajbhujel",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "@bloklabs/core": "^2.1.0"
+  }
 }

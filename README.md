@@ -1,6 +1,6 @@
 # Retard Editor
 
-An independent block editor npm package. Plain JavaScript ES modules, TypeScript declarations, and no runtime dependencies.
+Notion-like block editor npm package. Install, mount a holder, `save()` JSON blocks.
 
 ## Install
 
@@ -8,45 +8,38 @@ An independent block editor npm package. Plain JavaScript ES modules, TypeScript
 npm install retard-texteditor
 ```
 
-## Use
-
 ```js
 import RetardEditor from 'retard-texteditor';
+// optional host chrome:
+import 'retard-texteditor/styles.css';
 
 const editor = new RetardEditor({
   holder: 'editor',
-  onChange: async (instance) => console.log(await instance.save())
+  onChange: (instance, data) => console.log(data)
 });
-```
 
-Styles and dialogs are included. See the site docs for the full API.
+await editor.isReady;
+console.log(await editor.save());
+```
 
 ## Repo layout
 
 ```text
-src/        # publishable editor package
-website/    # landing, playground, docs (static HTML/CSS/JS)
-docs/       # contributor research notes
-tests/      # node + browser tests
-scripts/    # build, check, local server
+src/        # publishable package
+apps/web/   # Next.js site (landing, playground, docs + SEO)
+website/    # static fallback
+docs/
+tests/
+scripts/
 ```
 
-## Local site
+## Local
 
 ```sh
-npm run dev
+npm run build          # library + vendor copies for the site
+npm run dev            # Next.js on http://localhost:3000
+npm run dev:static     # static site http://localhost:5173
 ```
-
-Opens the static site at **http://localhost:5173** (landing, playground, docs). Host the `website/` folder anywhere after `npm run build` (vendor bundles are copied into `website/assets/vendor/`).
-
-## Publish (you run this)
-
-```sh
-npm run build
-npm publish --access public
-```
-
-This repo does not push or publish for you.
 
 ## Checks
 
@@ -54,4 +47,12 @@ This repo does not push or publish for you.
 npm test
 npm run check
 npm run build
+npm run build:web
+```
+
+## Publish (you run this)
+
+```sh
+npm run build
+npm publish --access public
 ```
