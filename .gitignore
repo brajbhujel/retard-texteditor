@@ -2,6 +2,10 @@ node_modules/
 dist/
 website/assets/vendor/*
 !website/assets/vendor/.gitkeep
+apps/web/node_modules/
+apps/web/.next/
+apps/web/public/vendor/*
+!apps/web/public/vendor/.gitkeep
 .DS_Store
 ._*
 *.log
@@ -18,3 +22,4 @@ postman/
 .vscode/
 !scripts/
 !scripts/*.mjs
+docs/
