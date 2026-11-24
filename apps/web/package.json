@@ -9,8 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@bloklabs/core": "^2.1.0",
     "@phosphor-icons/react": "^2.1.10",
-    "framer-motion": "^14.14.0",
+    "framer-motion": "^12.23.24",
     "next": "^15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
