@@ -1,7 +1,8 @@
 import Link from 'next/link';
+import { GITHUB_REPO } from '@/lib/site';
 
 type Props = {
-  current?: 'home' | 'docs' | 'api' | 'playground';
+  current?: 'home' | 'playground';
 };
 
 export function SiteHeader({ current }: Props) {
@@ -13,15 +14,12 @@ export function SiteHeader({ current }: Props) {
           <span className="brand__tag">editor</span>
         </Link>
         <nav className="nav" aria-label="Primary">
-          <Link href="/docs" aria-current={current === 'docs' || current === 'api' ? 'page' : undefined}>
-            Docs
-          </Link>
-          <Link className="nav-hide-sm" href="/docs/api">
-            API
-          </Link>
           <Link href="/playground" aria-current={current === 'playground' ? 'page' : undefined}>
             Playground
           </Link>
+          <a href={GITHUB_REPO} target="_blank" rel="noreferrer">
+            GitHub
+          </a>
           <Link className="button button--primary button--small" href="/playground">
             Try it
           </Link>

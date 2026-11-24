@@ -7,7 +7,6 @@ export function SiteFooter() {
       <div className="site-footer__inner">
         <span>retard-texteditor · MIT</span>
         <span className="site-footer__links">
-          <Link href="/docs">Docs</Link>
           <Link href="/playground">Playground</Link>
           <a href={NPM_PACKAGE} target="_blank" rel="noreferrer">
             npm
